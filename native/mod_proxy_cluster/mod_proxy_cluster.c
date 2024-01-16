@@ -1369,13 +1369,12 @@ static void update_workers_lbstatus(proxy_server_conf *conf, apr_pool_t *pool, s
     /* update lbstatus if needed */
     for (i = 0; i < size; i++) {
         nodeinfo_t *ou;
-        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         /* Check if we are told to stop */
         if (child_stopping) {
-            node_storage->unlock_nodes();
             return;
         }
 
+        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         if (node_storage->read_node(id[i], &ou) != APR_SUCCESS) {
             node_storage->unlock_nodes();
             continue;
@@ -2206,11 +2205,10 @@ static void proxy_cluster_watchdog_func(server_rec *s, apr_pool_t *pool)
             }
             node_table = cached_node_table;
         } else {
-            ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
             if (child_stopping) {
-                node_storage->unlock_nodes();
                 return;
             }
+            ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
             node_table = read_node_table(pool, node_storage, 0);
             node_storage->unlock_nodes();
         }
@@ -2219,13 +2217,13 @@ static void proxy_cluster_watchdog_func(server_rec *s, apr_pool_t *pool)
     while (s) {
         sconf = s->module_config;
         conf = (proxy_server_conf *)ap_get_module_config(sconf, &proxy_module);
-        /* Create new workers if the shared memory has changed */
-        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         if (child_stopping) {
-            node_storage->unlock_nodes();
             return;
         }
-        if (last) {
+
+        /* Create new workers if the shared memory has changed */
+        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
+        if (last && smain == s) {
             /* Add the workers and balancers */
             update_workers_node(conf, pool, s, 0, node_table);
             /* Check for workers that point to "cleaned" shared memory */
@@ -2241,15 +2239,16 @@ static void proxy_cluster_watchdog_func(server_rec *s, apr_pool_t *pool)
             remove_timeout_sessionid(conf, pool, s);
         }
         /* cleanup removed node in shared memory */
-        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         if (child_stopping) {
-            node_storage->unlock_nodes();
             return;
         }
+
+        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         remove_removed_node(pool, conf, s);
         node_storage->unlock_nodes();
         s = s->next;
     }
+
     if (last) {
         node_storage->worker_nodes_are_updated(smain, last);
     }
