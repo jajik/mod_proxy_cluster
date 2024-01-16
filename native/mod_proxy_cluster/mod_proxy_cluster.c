@@ -1629,7 +1629,7 @@ static proxy_worker *internal_find_best_byrequests(const proxy_balancer *balance
 
     workers = apr_pcalloc(r->pool, sizeof(proxy_worker *) * balancer->workers->nelts);
     ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server,
-                 "internal_find_best_byrequests: Entering byrequests for CLUSTER (%s) failoverdomain:%d",
+                 "internal_find_best_byrequests: Entering byrequests for balancer (%s) failoverdomain:%d",
                  balancer->s->name, failoverdomain);
 
     /* create workers for new nodes */
@@ -2887,8 +2887,8 @@ static proxy_worker *find_session_route(const proxy_balancer *balancer, request_
          * the route supplied by the client. (mod_proxy compatibility).
          */
         apr_table_setn(r->subprocess_env, "BALANCER_ROUTE_CHANGED", "1");
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_session_route: CLUSTER: Route changed from %s to %s",
-                     *route, worker->s->route);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_session_route: Route changed from %s to %s", *route,
+                     worker->s->route);
     }
     return worker;
 }
@@ -2903,7 +2903,7 @@ static proxy_worker *find_best_worker(const proxy_balancer *balancer, const prox
 
     if ((rv = PROXY_THREAD_LOCK(balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "find_best_worker: CLUSTER: (%s). Lock failed for find_best_worker()", balancer->s->name);
+                     "find_best_worker: balancer: (%s). Lock failed for find_best_worker()", balancer->s->name);
         return NULL;
     }
 
@@ -2912,7 +2912,7 @@ static proxy_worker *find_best_worker(const proxy_balancer *balancer, const prox
 
     if ((rv = PROXY_THREAD_UNLOCK(balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "find_best_worker: CLUSTER: (%s). Unlock failed for find_best_worker()", balancer->s->name);
+                     "find_best_worker: balancer: (%s). Unlock failed for find_best_worker()", balancer->s->name);
     }
 
     if (candidate == NULL) {
@@ -3099,18 +3099,16 @@ static int proxy_cluster_pre_request(proxy_worker **worker, proxy_balancer **bal
     }
 
     *worker = NULL;
-    if (*balancer) {
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_pre_request: url %s balancer %s", *url,
-                     (*balancer)->s->name);
-    } else {
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_pre_request: url %s", *url);
-    }
+
     /* Step 1: check if the url is for us
      * The url we can handle starts with 'balancer://'
      * If balancer is already provided skip the search
      * for balancer, because this is failover attempt.
      */
     if (*balancer) {
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_pre_request: url %s balancer %s", *url,
+                     (*balancer)->s->name);
+
         /* Adjust the helper->count corresponding to the previous try */
         const char *worker_name = apr_table_get(r->subprocess_env, "BALANCER_WORKER_NAME");
         if (worker_name && *worker_name) {
@@ -3140,24 +3138,20 @@ static int proxy_cluster_pre_request(proxy_worker **worker, proxy_balancer **bal
         } else {
             ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_pre_request: NO worker");
         }
-    }
+        /* TODO if we don't have a balancer but a route we should use it directly */
+    } else if (!(*balancer = ap_proxy_get_balancer(r->pool, conf, *url, 0))) {
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_pre_request: url %s", *url);
 
-    /* TODO if we don't have a balancer but a route we should use it directly */
-    if (!*balancer && !(*balancer = ap_proxy_get_balancer(r->pool, conf, *url, 0))) {
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_pre_request: NOT CREATED!!!");
         /* May be the node has not been created yet */
         ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         update_workers_node(conf, r->pool, r->server, 1, node_table);
         check_workers(conf, r->server);
         node_storage->unlock_nodes();
         if (!(*balancer = ap_proxy_get_balancer(r->pool, conf, *url, 0))) {
-            /* node_storage->unlock_nodes(); */
-            ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "proxy_cluster_pre_request: CLUSTER no balancer for %s",
-                         *url);
+            ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "proxy_cluster_pre_request: no balancer for %s", *url);
             return DECLINED;
         }
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
-                     "proxy_cluster_pre_request: CLUSTER balancer CREATED for %s", *url);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_pre_request: balancer created for %s", *url);
     }
 
     /* Step 2: find the session route */
@@ -3169,7 +3163,7 @@ static int proxy_cluster_pre_request(proxy_worker **worker, proxy_balancer **bal
      */
     if ((rv = PROXY_THREAD_LOCK(*balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "proxy_cluster_pre_request: CLUSTER: (%s). Lock failed for pre_request", (*balancer)->s->name);
+                     "proxy_cluster_pre_request: balancer: (%s). Lock failed for pre_request", (*balancer)->s->name);
         return DECLINED;
     }
     if (runtime) {
@@ -3183,11 +3177,11 @@ static int proxy_cluster_pre_request(proxy_worker **worker, proxy_balancer **bal
              * member of the same balancer in which case return 503
              */
             ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server,
-                         "proxy_cluster_pre_request: CLUSTER: (%s). All workers are in error state for route (%s)",
+                         "proxy_cluster_pre_request: balancer: (%s). All workers are in error state for route (%s)",
                          (*balancer)->s->name, route);
             if ((rv = PROXY_THREAD_UNLOCK(*balancer)) != APR_SUCCESS) {
                 ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                             "proxy_cluster_pre_request: CLUSTER: (%s). Unlock failed for pre_request",
+                             "proxy_cluster_pre_request: balancer: (%s). Unlock failed for pre_request",
                              (*balancer)->s->name);
             }
             return HTTP_SERVICE_UNAVAILABLE;
@@ -3200,7 +3194,7 @@ static int proxy_cluster_pre_request(proxy_worker **worker, proxy_balancer **bal
 
     if ((rv = PROXY_THREAD_UNLOCK(*balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "proxy_cluster_pre_request: CLUSTER: (%s). Unlock failed for pre_request", (*balancer)->s->name);
+                     "proxy_cluster_pre_request: balancer: (%s). Unlock failed for pre_request", (*balancer)->s->name);
     }
     if (!*worker) {
         /* We have to failover (in domain only may be) or we don't use sticky sessions */
@@ -3210,14 +3204,14 @@ static int proxy_cluster_pre_request(proxy_worker **worker, proxy_balancer **bal
             const char *no_context_error = apr_table_get(r->notes, "no-context-error");
             if (no_context_error == NULL) {
                 ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server,
-                             "proxy_cluster_pre_request: CLUSTER: (%s). All workers are in error state",
+                             "proxy_cluster_pre_request: balancer: (%s). All workers are in error state",
                              (*balancer)->s->name);
 
                 return HTTP_SERVICE_UNAVAILABLE;
             }
 
             ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
-                         "proxy_cluster_pre_request: CLUSTER: (%s). No context for the URL", (*balancer)->s->name);
+                         "proxy_cluster_pre_request: balancer: (%s). No context for the URL", (*balancer)->s->name);
             return HTTP_NOT_FOUND;
         }
         if ((*balancer)->s->sticky[0] != '\0' && runtime) {
@@ -3353,7 +3347,7 @@ static int proxy_cluster_post_request(proxy_worker *worker, proxy_balancer *bala
         apr_status_t rv;
         if ((rv = PROXY_THREAD_LOCK(balancer)) != APR_SUCCESS) {
             ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                         "proxy_cluster_post_request: BALANCER: (%s). Lock failed for post_request", balancer->s->name);
+                         "proxy_cluster_post_request: balancer: (%s). Lock failed for post_request", balancer->s->name);
             return HTTP_INTERNAL_SERVER_ERROR;
         }
         for (i = 0; i < balancer->errstatuses->nelts; i++) {
@@ -3371,7 +3365,7 @@ static int proxy_cluster_post_request(proxy_worker *worker, proxy_balancer *bala
         }
         if ((rv = PROXY_THREAD_UNLOCK(balancer)) != APR_SUCCESS) {
             ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                         "proxy_cluster_post_request: BALANCER: (%s). Unlock failed for post_request",
+                         "proxy_cluster_post_request: balancer: (%s). Unlock failed for post_request",
                          balancer->s->name);
         }
     }
