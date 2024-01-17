@@ -996,7 +996,7 @@ static apr_status_t http_handle_cping_cpong(proxy_conn_rec *p_conn, request_rec 
                            " (internal mod_cluster connection)\r\n\r\n", NULL);
     header_brigade = apr_brigade_create(r->pool, p_conn->connection->bucket_alloc);
     e = apr_bucket_pool_create(srequest, strlen(srequest), r->pool, p_conn->connection->bucket_alloc);
-    APR_BRIGADE_INSERT_TAIL(header_brigade, e);
+    //APR_BRIGADE_INSERT_TAIL(header_brigade, e);
     e = apr_bucket_flush_create(p_conn->connection->bucket_alloc);
     APR_BRIGADE_INSERT_TAIL(header_brigade, e);
 
