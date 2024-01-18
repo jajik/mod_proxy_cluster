@@ -2922,7 +2922,7 @@ static proxy_worker *find_best_worker(const proxy_balancer *balancer, const prox
          * By default the timeout is not set, and the server
          * returns SERVER_BUSY.
          */
-#if APR_HAS_THREADS
+#if 0
         if (balancer->s->timeout && recurse) {
             /* XXX: This can perhaps be build using some
              * smarter mechanism, like tread_cond.
@@ -3082,20 +3082,6 @@ static int proxy_cluster_pre_request(proxy_worker **worker, proxy_balancer **bal
     proxy_vhost_table *vhost_table = (proxy_vhost_table *)apr_table_get(r->notes, "vhost-table");
     proxy_context_table *context_table = (proxy_context_table *)apr_table_get(r->notes, "context-table");
     proxy_node_table *node_table = (proxy_node_table *)apr_table_get(r->notes, "node-table");
-
-    if (!vhost_table) {
-        vhost_table = read_vhost_table(r->pool, host_storage, 0);
-    }
-
-    if (!context_table) {
-        context_table = read_context_table(r->pool, context_storage, 0);
-    }
-
-    if (!node_table) {
-        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
-        node_table = read_node_table(r->pool, node_storage, 0);
-        node_storage->unlock_nodes();
-    }
 
     *worker = NULL;
 
