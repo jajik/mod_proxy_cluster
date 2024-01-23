@@ -144,6 +144,12 @@ jobs:
       - name: Build
         run: |
           ./native/scripts/windows-build.bat
+      - name: Run tests on Windows
+        shell: bash
+        run: |
+          cd test
+          sh setup-dependencies.sh
+          sh testsuite.sh
 
   tests:
     runs-on: ubuntu-latest
