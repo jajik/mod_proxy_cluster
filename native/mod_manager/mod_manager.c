@@ -3862,12 +3862,13 @@ static const command_rec manager_cmds[] = {
 static void manager_hooks(apr_pool_t *p)
 {
     static const char *const aszSucc[] = {"mod_proxy.c", NULL};
+    static const char *const initPre[] = {"mod_proxy_cluster.c", NULL};
 
     /* For the lock */
     ap_hook_pre_config(manager_pre_config, NULL, NULL, APR_HOOK_MIDDLE);
 
     /* Create the shared tables for mod_proxy_cluster */
-    ap_hook_post_config(manager_init, NULL, NULL, APR_HOOK_MIDDLE);
+    ap_hook_post_config(manager_init, initPre, NULL, APR_HOOK_MIDDLE);
 
     /* Attach to the shared tables with create the child */
     ap_hook_child_init(manager_child_init, NULL, NULL, APR_HOOK_FIRST);
