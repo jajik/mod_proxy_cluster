@@ -31,10 +31,10 @@ typedef struct mem mem_t;
 struct domaininfo
 {
     /* NOTE: Due to `loc_get_id`, struct MUST begin with id */
-    int id;                    /* id in table */
-    char domain[DOMAINNDSZ];   /* domain value */
-    char JVMRoute[JVMROUTESZ]; /* corresponding node */
-    char balancer[BALANCERSZ]; /* name of the balancer */
+    int id;                       /* id in table */
+    char domain[DOMAIN_SIZE];     /* domain value */
+    char JVMRoute[JVMROUTE_SIZE]; /* corresponding node */
+    char balancer[BALANCER_SIZE]; /* name of the balancer */
 
     apr_time_t updatetime; /* time of last received message */
 };

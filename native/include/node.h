@@ -36,14 +36,14 @@ struct nodemess
     int id; /* id in table and worker id */
 
     /* balancer info */
-    char balancer[BALANCERSZ]; /* name of the balancer */
-    char JVMRoute[JVMROUTESZ];
-    char Domain[DOMAINNDSZ];
-    char Host[HOSTNODESZ];
-    char Port[PORTNODESZ];
-    char Type[SCHEMENDSZ];
-    char Upgrade[SCHEMENDSZ];
-    char AJPSecret[AJPSECRETSZ];
+    char balancer[BALANCER_SIZE]; /* name of the balancer */
+    char JVMRoute[JVMROUTE_SIZE];
+    char Domain[DOMAIN_SIZE];
+    char Host[HOSTNODE_SIZE];
+    char Port[PORTNODE_SIZE];
+    char Type[SCHEME_SIZE];
+    char Upgrade[SCHEME_SIZE];
+    char AJPSecret[AJPSECRET_SIZE];
     int reversed; /* 1 : reversed... 0 : normal */
     int remove;   /* 1 : removed     0 : normal */
     long ResponseFieldSize;

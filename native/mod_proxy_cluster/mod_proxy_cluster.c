@@ -3423,7 +3423,7 @@ static int proxy_cluster_post_request(proxy_worker *worker, proxy_balancer *bala
                     sessionidinfo_t ou;
                     ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server,
                                  "proxy_cluster_post_request: sessionid changed (%s to %s)", sessionid, cookie);
-                    strncpy(ou.sessionid, sessionid, SESSIONIDSZ);
+                    strncpy(ou.sessionid, sessionid, SESSIONID_SIZE);
                     ou.id = -1;
                     sessionid_storage->remove_sessionid(&ou);
                 }
@@ -3436,8 +3436,8 @@ static int proxy_cluster_post_request(proxy_worker *worker, proxy_balancer *bala
 
             if (sessionid && route) {
                 sessionidinfo_t ou;
-                strncpy(ou.sessionid, sessionid, SESSIONIDSZ);
-                strncpy(ou.JVMRoute, route, JVMROUTESZ);
+                strncpy(ou.sessionid, sessionid, SESSIONID_SIZE);
+                strncpy(ou.JVMRoute, route, JVMROUTE_SIZE);
                 sessionid_storage->insert_update_sessionid(&ou);
             }
         }

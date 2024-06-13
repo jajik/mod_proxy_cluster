@@ -31,11 +31,11 @@ typedef struct mem mem_t;
 struct balancerinfo
 {
     /* NOTE: Due to `loc_get_id`, struct MUST begin with id */
-    int id;                    /* id in table */
-    char balancer[BALANCERSZ]; /* Name of the balancer */
-    int StickySession;         /* 0 : Don't use, 1: Use it */
-    char StickySessionCookie[COOKNAMESZ];
-    char StickySessionPath[PATHNAMESZ];
+    int id;                       /* id in table */
+    char balancer[BALANCER_SIZE]; /* Name of the balancer */
+    int StickySession;            /* 0 : Don't use, 1: Use it */
+    char StickySessionCookie[COOKNAME_SIZE];
+    char StickySessionPath[PATHNAME_SIZE];
     int StickySessionRemove; /* 0 : Don't remove, 1: Remove it */
     int StickySessionForce;  /* 0: Don't force, 1: return error */
     int Timeout;

@@ -31,10 +31,10 @@ typedef struct mem mem_t;
 struct hostinfo
 {
     /* NOTE: Due to `loc_get_id`, struct MUST begin with id */
-    int id;                    /* id in table */
-    char host[HOSTALIASZ + 1]; /* Alias element of the virtual host */
-    int vhost;                 /* id of the correspond virtual host */
-    int node;                  /* id of the node containing the virtual host */
+    int id;                        /* id in table */
+    char host[HOSTALIAS_SIZE + 1]; /* Alias element of the virtual host */
+    int vhost;                     /* id of the correspond virtual host */
+    int node;                      /* id of the node containing the virtual host */
 
     apr_time_t updatetime; /* time of last received message */
 };

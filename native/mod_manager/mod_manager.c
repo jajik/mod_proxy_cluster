@@ -738,12 +738,12 @@ static char **process_buff(request_rec *r, char *buff)
 static apr_status_t insert_update_host_guard(server_rec *s, mem_t *mem, hostinfo_t *info, char *alias)
 {
     int len = strlen(alias);
-    if (len > HOSTALIASZ) {
+    if (len > HOSTALIAS_SIZE) {
         ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s,
-                     "process_config: received alias %s is too long (trimmed to %d characters)", alias, HOSTALIASZ);
+                     "process_config: received alias %s is too long (trimmed to %d characters)", alias, HOSTALIAS_SIZE);
     }
-    strncpy(info->host, alias, HOSTALIASZ);
-    info->host[HOSTALIASZ] = '\0';
+    strncpy(info->host, alias, HOSTALIAS_SIZE);
+    info->host[HOSTALIAS_SIZE] = '\0';
     return insert_update_host(mem, info);
 }
 
@@ -800,16 +800,17 @@ static apr_status_t insert_update_context_guard(server_rec *s, mem_t *mem, conte
     int len = strlen(context);
 
     info->id = 0;
-    strncpy(info->context, context, CONTEXTSZ);
-    info->context[CONTEXTSZ] = '\0';
+    strncpy(info->context, context, CONTEXT_SIZE);
+    info->context[CONTEXT_SIZE] = '\0';
     if (status == REMOVE) {
         read_remove_context(mem, info);
         return APR_SUCCESS;
     }
 
-    if (len > CONTEXTSZ) {
+    if (len > CONTEXT_SIZE) {
         ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s,
-                     "process_config: received context %s is too long (trimmed to %d characters)", context, CONTEXTSZ);
+                     "process_config: received context %s is too long (trimmed to %d characters)", context,
+                     CONTEXT_SIZE);
     }
 
     return insert_update_context(mem, info);
@@ -2117,7 +2118,7 @@ static char *process_appl_cmd(request_rec *r, char **ptr, int status, int *errty
     if (vhost->host != NULL) {
         char *s = hostinfo.host;
         unsigned j = 1;
-        strncpy(hostinfo.host, vhost->host, HOSTALIASZ);
+        strncpy(hostinfo.host, vhost->host, HOSTALIAS_SIZE);
         while (*s != '\0' && *s != ',' && j < sizeof(hostinfo.host)) {
             j++;
             s++;
@@ -2245,8 +2246,8 @@ static char *process_appl_cmd(request_rec *r, char **ptr, int status, int *errty
         contextinfo_t in;
         contextinfo_t *ou;
         in.id = 0;
-        strncpy(in.context, vhost->context, CONTEXTSZ);
-        in.context[CONTEXTSZ] = '\0';
+        strncpy(in.context, vhost->context, CONTEXT_SIZE);
+        in.context[CONTEXT_SIZE] = '\0';
         in.vhost = host->vhost;
         in.node = node->mess.id;
         ou = read_context(contextstatsmem, &in);
@@ -2663,9 +2664,9 @@ static int manager_map_to_storage(request_rec *r)
  */
 static char *context_string(request_rec *r, contextinfo_t *ou, const char *Alias, const char *JVMRoute)
 {
-    char context[CONTEXTSZ + 1];
-    strncpy(context, ou->context, CONTEXTSZ);
-    context[CONTEXTSZ] = '\0';
+    char context[CONTEXT_SIZE + 1];
+    strncpy(context, ou->context, CONTEXT_SIZE);
+    context[CONTEXT_SIZE] = '\0';
     return apr_pstrcat(r->pool, "JVMRoute=", JVMRoute, "&Alias=", Alias, "&Context=", context, NULL);
 }
 
@@ -2768,7 +2769,7 @@ static void print_contexts(request_rec *r, int reduce_display, int allow_cmd, in
         if (ou->node != node || ou->vhost != host) {
             continue;
         }
-        ap_rprintf(r, "%.*s, Status: %s Request: %d ", CONTEXTSZ, mc_escape_html(r->pool, ou->context, CONTEXTSZ),
+        ap_rprintf(r, "%.*s, Status: %s Request: %d ", CONTEXT_SIZE, mc_escape_html(r->pool, ou->context, CONTEXT_SIZE),
                    context_status_to_string(ou->status), ou->nbrequests);
         if (allow_cmd) {
             print_context_command(r, ou, Alias, JVMRoute);
@@ -2820,7 +2821,7 @@ static void print_hosts(request_rec *r, int reduce_display, int allow_cmd, int n
             }
             vhost = ou->vhost;
 
-            ap_rprintf(r, "%.*s", HOSTALIASZ, mc_escape_html(r->pool, ou->host, HOSTALIASZ));
+            ap_rprintf(r, "%.*s", HOSTALIAS_SIZE, mc_escape_html(r->pool, ou->host, HOSTALIAS_SIZE));
             ap_rprintf(r, reduce_display ? " " : "\n");
 
             /* Go ahead and check for any other later alias entries for this vhost and print them now */
@@ -2842,7 +2843,7 @@ static void print_hosts(request_rec *r, int reduce_display, int allow_cmd, int n
                 if (i == j - 1) {
                     i++;
                 }
-                ap_rprintf(r, "%.*s", HOSTALIASZ, mc_escape_html(r->pool, pv->host, HOSTALIASZ));
+                ap_rprintf(r, "%.*s", HOSTALIAS_SIZE, mc_escape_html(r->pool, pv->host, HOSTALIAS_SIZE));
                 ap_rprintf(r, reduce_display ? " " : "\n");
             }
         }
@@ -2874,7 +2875,7 @@ static void print_sessionid(request_rec *r)
         if (get_sessionid(sessionidstatsmem, &ou, id[i]) != APR_SUCCESS) {
             continue;
         }
-        ap_rprintf(r, "id: %.*s route: %.*s\n", SESSIONIDSZ, ou->sessionid, JVMROUTESZ, ou->JVMRoute);
+        ap_rprintf(r, "id: %.*s route: %.*s\n", SESSIONID_SIZE, ou->sessionid, JVMROUTE_SIZE, ou->JVMRoute);
     }
     ap_rprintf(r, "</pre>");
 }
@@ -2903,8 +2904,8 @@ static void print_domain(request_rec *r, int reduce_display)
         if (get_domain(domainstatsmem, &ou, id[i]) != APR_SUCCESS) {
             continue;
         }
-        ap_rprintf(r, "dom: %.*s route: %.*s balancer: %.*s\n", DOMAINNDSZ, ou->domain, JVMROUTESZ, ou->JVMRoute,
-                   BALANCERSZ, ou->balancer);
+        ap_rprintf(r, "dom: %.*s route: %.*s balancer: %.*s\n", DOMAIN_SIZE, ou->domain, JVMROUTE_SIZE, ou->JVMRoute,
+                   BALANCER_SIZE, ou->balancer);
     }
     ap_rprintf(r, "</pre>");
 #else
@@ -3389,9 +3390,9 @@ static int manager_handler(request_rec *r)
         maxbufsiz = mconf->maxmesssize;
     } else {
         /* we calculate it */
-        maxbufsiz = 9 + JVMROUTESZ;
-        maxbufsiz = maxbufsiz + (mconf->maxhost * HOSTALIASZ) + 7;
-        maxbufsiz = maxbufsiz + (mconf->maxcontext * CONTEXTSZ) + 8;
+        maxbufsiz = 9 + JVMROUTE_SIZE;
+        maxbufsiz = maxbufsiz + (mconf->maxhost * HOSTALIAS_SIZE) + 7;
+        maxbufsiz = maxbufsiz + (mconf->maxcontext * CONTEXT_SIZE) + 8;
     }
     if (maxbufsiz < MAXMESSSIZE) {
         maxbufsiz = MAXMESSSIZE;

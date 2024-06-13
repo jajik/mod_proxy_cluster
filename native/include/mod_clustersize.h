@@ -11,25 +11,25 @@
 #define MOD_CLUSTERSIZE_H
 
 /* For host.h */
-#define HOSTALIASZ  255
+#define HOSTALIAS_SIZE 255
 
 /* For context.h */
-#define CONTEXTSZ   80
+#define CONTEXT_SIZE   80
 
 /* For node.h */
-#define BALANCERSZ  40
-#define JVMROUTESZ  64
-#define DOMAINNDSZ  20
-#define HOSTNODESZ  64
-#define PORTNODESZ  7
-#define SCHEMENDSZ  16
-#define AJPSECRETSZ 64
+#define BALANCER_SIZE  40
+#define JVMROUTE_SIZE  64
+#define DOMAIN_SIZE    20
+#define HOSTNODE_SIZE  64
+#define PORTNODE_SIZE  7
+#define SCHEME_SIZE    16
+#define AJPSECRET_SIZE 64
 
 /* For balancer.h */
-#define COOKNAMESZ  30
-#define PATHNAMESZ  30
+#define COOKNAME_SIZE  30
+#define PATHNAME_SIZE  30
 
 /* For sessionid.h */
-#define SESSIONIDSZ 128
+#define SESSIONID_SIZE 128
 
 #endif /* MOD_CLUSTERSIZE_H */
