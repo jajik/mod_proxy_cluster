@@ -1385,6 +1385,11 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
     /* Check for corresponding proxy_worker */
     worker = proxy_node_getid(r, &nodeinfo, &id, &the_conf);
     if (id != -1) {
+        if (nodeinfo.mess.id != id) {
+            ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server,
+                         "process_config: worker %d does not match nodeinfo.mess.id %d (%s) exists and should be OK", id, nodeinfo.mess.id, nodeinfo.mess.JVMRoute);
+        }
+
         /* Same node should be OK, different nodes will bring problems */
         if (node != NULL && node->mess.id == id) {
             ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
@@ -1398,7 +1403,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
                          "process_config: worker %d (%s) exists and IS NOT OK!!!", id, nodeinfo.mess.JVMRoute);
             if (node == NULL) {
                 /* try to read the node */
-                nodeinfo_t *workernode = read_node_by_id(nodestatsmem, id);
+                nodeinfo_t *workernode = read_node_by_id(nodestatsmem, nodeinfo.mess.id);
                 if (workernode != NULL) {
                     if (strcmp(workernode->mess.JVMRoute, "REMOVED") == 0) {
                         /* We are in the remove process */
@@ -1414,7 +1419,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
                         *errtype = TYPEMEM;
                         return MNODEET;
                     }
-                    removed = id; /* we save the id of the worknode in case insert/update fails */
+                    removed = nodeinfo.mess.id; /* we save the id of the worknode in case insert/update fails */
                 }
             }
             clean = 0;
