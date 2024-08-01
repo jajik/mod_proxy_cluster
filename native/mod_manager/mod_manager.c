@@ -1414,7 +1414,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
                         *errtype = TYPEMEM;
                         return MNODEET;
                     }
-                    removed = id; /* we save the id of the worknode in case insert/update fails */
+                    removed = node->mess.id; /* we save the id of the worknode in case insert/update fails */
                 }
             }
             clean = 0;
