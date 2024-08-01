@@ -1398,7 +1398,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
                          "process_config: worker %d (%s) exists and IS NOT OK!!!", id, nodeinfo.mess.JVMRoute);
             if (node == NULL) {
                 /* try to read the node */
-                nodeinfo_t *workernode = read_node_by_id(nodestatsmem, id);
+                nodeinfo_t *workernode = read_node_by_id(nodestatsmem, node->mess.id);
                 if (workernode != NULL) {
                     if (strcmp(workernode->mess.JVMRoute, "REMOVED") == 0) {
                         /* We are in the remove process */
