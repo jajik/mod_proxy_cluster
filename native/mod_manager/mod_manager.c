@@ -1391,8 +1391,6 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
                          "process_config: worker %d (%s) exists and should be OK", id, nodeinfo.mess.JVMRoute);
         } else {
             /* Here that is the tricky part, we will insert_update the whole node including proxy_worker_shared */
-            char *pptr;
-            unsigned long offset;
 
             ap_log_error(APLOG_MARK, APLOG_WARNING, 0, r->server,
                          "process_config: worker %d (%s) exists and IS NOT OK!!!", id, nodeinfo.mess.JVMRoute);
@@ -1419,13 +1417,8 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
             }
             clean = 0;
             ap_assert(worker->s->port != 0);
-            /* XXX: really needed? offset logic OK here, we save the worker information (see mod_proxy_cluster) */
-            pptr = (char *)&nodeinfo;
-            offset = sizeof(nodemess_t) + sizeof(apr_time_t) +
-                     sizeof(int); /* nodeinfo.offset doesn't contain the information */
-            offset = APR_ALIGN_DEFAULT(offset);
-            pptr = pptr + offset;
-            memcpy(pptr, worker->s, sizeof(proxy_worker_shared)); /* restore the information we are going to reuse */
+            /* we save the worker information (see mod_proxy_cluster) */
+            memcpy(nodeinfo.stat, worker->s, sizeof(proxy_worker_shared)); /* restore the information we are going to reuse */
             ap_assert(the_conf);
         }
     } else {
