@@ -1418,7 +1418,8 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
             clean = 0;
             ap_assert(worker->s->port != 0);
             /* we save the worker information (see mod_proxy_cluster) */
-            memcpy(nodeinfo.stat, worker->s, sizeof(proxy_worker_shared)); /* restore the information we are going to reuse */
+            memcpy(nodeinfo.stat, worker->s,
+                   sizeof(proxy_worker_shared)); /* restore the information we are going to reuse */
             ap_assert(the_conf);
         }
     } else {
