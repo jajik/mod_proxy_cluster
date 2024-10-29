@@ -928,8 +928,8 @@ static int is_same_worker_existing(const request_rec *r, const nodeinfo_t *node)
  */
 static apr_status_t mod_manager_manage_worker(request_rec *r, const nodeinfo_t *node, const balancerinfo_t *bal)
 {
-    apr_table_t *params;
     apr_status_t rv;
+    apr_table_t *params;
     kv_list_t *curr = proxyhctemplate;
     params = apr_table_make(r->pool, 10);
     /* balancer */
@@ -945,6 +945,7 @@ static apr_status_t mod_manager_manage_worker(request_rec *r, const nodeinfo_t *
                   apr_pstrcat(r->pool, node->mess.Type, "://", node->mess.Host, ":", node->mess.Port, NULL));
     rv = balancer_manage(r, params);
     if (rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "balancer_manage FAILED");
         return rv;
     }
     apr_table_clear(params);
@@ -1222,14 +1223,20 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
     proxy_server_conf *conf = (proxy_server_conf *)ap_get_module_config(sconf, &proxy_module);
     proxy_balancer *balancer = (proxy_balancer *)conf->balancers->elts;
     if (sscanf(node->mess.Port, "%u", &port) != 1) {
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: CANNOT PARSE THE PORT %s",
+                     node->mess.Port);
         return NULL; /* something is wrong */
     }
     for (i = 0; i < conf->balancers->nelts; i++, balancer++) {
         int j;
         proxy_worker **workers;
         if (strcmp(balancer->s->name, name)) {
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: CONTINUE AFTER %s != %s",
+                         balancer->s->name, name);
             continue;
         }
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: balancer %d has %d workers", i,
+                     balancer->workers->nelts);
         workers = (proxy_worker **)balancer->workers->elts;
         for (j = 0; j < balancer->workers->nelts; j++, workers++) {
             proxy_worker *worker = *workers;
@@ -1242,6 +1249,8 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
         }
     }
 
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: NOTHING FOUND (balancers: %d)",
+                 conf->balancers->nelts);
     return NULL;
 }
 
@@ -1511,6 +1520,10 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
             ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: NOT NEW (%d %s) %s %s (%s)",
                          workernode->mess.id, workernode->mess.JVMRoute, workernode->mess.Host, workernode->mess.Port,
                          nodeinfo.mess.JVMRoute);
+
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                         "process_config: NOT NEW remove: %d, num_remove_check: %d", workernode->mess.remove,
+                         workernode->mess.num_remove_check);
 
             id = workernode->mess.id;
             if (strcmp(workernode->mess.JVMRoute, "REMOVED") == 0) {
@@ -1925,7 +1938,7 @@ static char *process_info(request_rec *r, int *errtype)
 
         proxystat = read_shared_by_node(r, ou);
         if (!proxystat) {
-            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: No proxystat, assum zeros");
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_info: No proxystat, assum zeros");
             proxystat = apr_pcalloc(r->pool, sizeof(proxy_worker_shared));
         }
 
@@ -2084,6 +2097,7 @@ static char *process_node_cmd(request_rec *r, int status, int *errtype, nodeinfo
     if (status == REMOVE) {
         int id;
         node->mess.remove = 1;
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_node_cmd: NOT INITIALIZED IS %d", id);
         insert_update_node(nodestatsmem, node, &id, 0);
     }
     return NULL;
@@ -3104,6 +3118,7 @@ static void print_proxystat(request_rec *r, int reduce_display, nodeinfo_t *node
     proxy_worker_shared tmp;
     const proxy_worker_shared *proxystat = read_shared_by_node(r, node);
     if (!proxystat) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "PROXYSTAT FOR %d NOT FOUND", node->mess.id);
         status = "NOTOK";
         proxystat = &tmp;
     } else {

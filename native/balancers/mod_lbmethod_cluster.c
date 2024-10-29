@@ -91,6 +91,7 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
     proxy_vhost_table *vhost_table = (proxy_vhost_table *)apr_table_get(r->notes, "vhost-table");
     proxy_context_table *context_table = (proxy_context_table *)apr_table_get(r->notes, "context-table");
     proxy_node_table *node_table = (proxy_node_table *)apr_table_get(r->notes, "node-table");
+    node_storage->lock_nodes();
 
     if (!vhost_table) {
         vhost_table = read_vhost_table(r->pool, host_storage, 0);
@@ -104,8 +105,8 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
         node_table = read_node_table(r->pool, node_storage, 0);
     }
 
-    node_storage->lock_nodes();
     mycandidate = internal_find_best_byrequests(r, balancer, vhost_table, context_table, node_table);
+
     node_storage->unlock_nodes();
 
     return mycandidate;

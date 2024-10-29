@@ -179,6 +179,7 @@ tomcat_wait_for_n_nodes() {
         i=$(expr $i + 1)
         if [ $i -gt 60 ]; then
             echo "Timeout! There are not $nodes nodes but $NBNODES instead"
+            curl -s http://localhost:6666/mod_cluster_manager
             exit 1
         fi
     done
