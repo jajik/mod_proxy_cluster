@@ -926,6 +926,7 @@ static int is_same_worker_existing(const request_rec *r, const nodeinfo_t *node)
  */
 static apr_status_t mod_manager_manage_worker(request_rec *r, const nodeinfo_t *node, const balancerinfo_t *bal)
 {
+    apr_status_t rv;
     apr_table_t *params;
     params = apr_table_make(r->pool, 10);
     /* balancer */
@@ -939,7 +940,11 @@ static apr_status_t mod_manager_manage_worker(request_rec *r, const nodeinfo_t *
     apr_table_set(params, "b_wyes", "1");
     apr_table_set(params, "b_nwrkr",
                   apr_pstrcat(r->pool, node->mess.Type, "://", node->mess.Host, ":", node->mess.Port, NULL));
-    balancer_manage(r, params);
+    rv = balancer_manage(r, params);
+    if (rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "balancer_manage FAILED");
+        return rv;
+    }
     apr_table_clear(params);
 
     /* now process the worker */
@@ -1206,12 +1211,16 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
     proxy_server_conf *conf = (proxy_server_conf *)ap_get_module_config(sconf, &proxy_module);
     proxy_balancer *balancer = (proxy_balancer *)conf->balancers->elts;
     if (sscanf(node->mess.Port, "%u", &port) != 1) {
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: CANNOT PARSE THE PORT %s",
+                     node->mess.Port);
         return NULL; /* something is wrong */
     }
     for (i = 0; i < conf->balancers->nelts; i++, balancer++) {
         int j;
         proxy_worker **workers;
         if (strcmp(balancer->s->name, name)) {
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: CONTINUE AFTER %s != %s",
+                         balancer->s->name, name);
             continue;
         }
         workers = (proxy_worker **)balancer->workers->elts;
@@ -1226,6 +1235,8 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
         }
     }
 
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: NOTHING FOUND (balancers: %d)",
+                 conf->balancers->nelts);
     return NULL;
 }
 
@@ -1565,7 +1576,6 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
     /* Insert the Alias and corresponding Context */
     phost = vhost;
     if (phost->host == NULL && phost->context == NULL) {
-        loc_unlock_nodes();
         /* if using mod_balancer create or update the worker */
         if (balancer_manage) {
             apr_status_t rv = mod_manager_manage_worker(r, &nodeinfo, &balancerinfo);
@@ -1573,6 +1583,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
         } else {
             ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: NO balancer-manager");
         }
+        loc_unlock_nodes();
         return NULL; /* Alias and Context missing */
     }
     while (phost) {
@@ -1587,7 +1598,6 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
         phost = phost->next;
         vid++;
     }
-    loc_unlock_nodes();
 
     /* if using mod_balancer create or update the worker */
     if (balancer_manage) {
@@ -1596,6 +1606,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
     } else {
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: NO balancer-manager");
     }
+    loc_unlock_nodes();
 
     ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: Done");
 
@@ -1909,7 +1920,7 @@ static char *process_info(request_rec *r, int *errtype)
 
         proxystat = read_shared_by_node(r, ou);
         if (!proxystat) {
-            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: No proxystat, assum zeros");
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_info: No proxystat, assum zeros");
             proxystat = apr_pcalloc(r->pool, sizeof(proxy_worker_shared));
         }
 
@@ -3088,6 +3099,7 @@ static void print_proxystat(request_rec *r, int reduce_display, nodeinfo_t *node
     proxy_worker_shared tmp;
     const proxy_worker_shared *proxystat = read_shared_by_node(r, node);
     if (!proxystat) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "PROXYSTAT FOR %d NOT FOUND", node->mess.id);
         status = "NOTOK";
         proxystat = &tmp;
     } else {
