@@ -2079,7 +2079,7 @@ static char *process_node_cmd(request_rec *r, int status, int *errtype, nodeinfo
 
     /* The REMOVE-APP * removes the node (well mark it removed) */
     if (status == REMOVE) {
-        int id;
+        int id = node->mess.id;
         node->mess.remove = 1;
         insert_update_node(nodestatsmem, node, &id, 0);
     }
