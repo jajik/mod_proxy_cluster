@@ -274,7 +274,9 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
                 proxy_worker **workers;
                 proxy_worker *worker;
                 /* Have any new balancers or workers been added dynamically? */
+                node_storage->lock_nodes();
                 ap_proxy_sync_balancer(balancer, s, conf);
+                node_storage->unlock_nodes();
                 workers = (proxy_worker **)balancer->workers->elts;
                 for (n = 0; n < balancer->workers->nelts; n++) {
                     nodeinfo_t *node;
