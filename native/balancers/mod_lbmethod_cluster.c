@@ -375,6 +375,7 @@ static int lbmethod_cluster_post_config(apr_pool_t *p, apr_pool_t *plog, apr_poo
         ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s,
                      "lbmethod_cluster_post_config: Can't find mod_manager for set_proxyhctemplate function");
     } else if (!apr_is_empty_table(proxyhctemplate)) {
+        ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s, "PROYXHCTEMPLATE ENTRIES %d", apr_table_elts(proxyhctemplate)->nelts);
         set_proxyhctemplate_f(p, proxyhctemplate);
     }
 

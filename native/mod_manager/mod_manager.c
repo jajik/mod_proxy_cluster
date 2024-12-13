@@ -958,6 +958,8 @@ static apr_status_t mod_manager_manage_worker(request_rec *r, const nodeinfo_t *
     h = apr_table_elts(proxyhctemplate);
     entries = (const apr_table_entry_t *)h->elts;
 
+    ap_log_error(APLOG_MARK, APLOG_WARNING, 0, r->server, "PROYXHCTEMPLATE ENTRIES %d", h->nelts);
+
     for (i = 0; i < h->nelts; i++) {
         const char *key = translate_balancer_params(entries[i].key);
         if (key != NULL) {
