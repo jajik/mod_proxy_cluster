@@ -104,8 +104,12 @@ jobs:
 
   make-httpd-maintainer-mode:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image-tag: [ latest ]
     container:
-      image: quay.io/mod_cluster/ci-httpd-dev
+      image: quay.io/mod_cluster/ci-httpd-dev:${{ matrix.image-tag}}
     defaults:
       run:
         shell: bash
