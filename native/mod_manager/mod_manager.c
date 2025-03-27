@@ -3099,9 +3099,11 @@ static void print_proxystat(request_rec *r, int reduce_display, nodeinfo_t *node
     const proxy_worker_shared *proxystat = read_shared_by_node(r, node);
     if (!proxystat) {
         status = "NOTOK";
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "print_proxystat: NOTOK for node %d because of NULL proxystat", node->mess.id);
         proxystat = &tmp;
     } else {
         status = proxystat->status & PROXY_WORKER_NOT_USABLE_BITMAP ? "NOTOK" : "OK";
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "print_proxystat: %s for node %d", status, node->mess.id);
     }
 
     if (reduce_display) {
