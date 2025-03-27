@@ -1216,6 +1216,7 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
     proxy_server_conf *conf = (proxy_server_conf *)ap_get_module_config(sconf, &proxy_module);
     proxy_balancer *balancer = (proxy_balancer *)conf->balancers->elts;
     if (sscanf(node->mess.Port, "%u", &port) != 1) {
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: something is wrong, node %d port %d", node->mess.id, port);
         return NULL; /* something is wrong */
     }
     for (i = 0; i < conf->balancers->nelts; i++, balancer++) {
@@ -1236,6 +1237,7 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
         }
     }
 
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: default NULL");
     return NULL;
 }
 
