@@ -76,6 +76,7 @@ static proxy_worker *internal_find_best_byrequests(request_rec *r, const proxy_b
 static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
 {
     proxy_worker *mycandidate = NULL;
+    apr_status_t rv = APR_SUCCESS;
 
     proxy_vhost_table *vhost_table = (proxy_vhost_table *)apr_table_get(r->notes, "vhost-table");
     proxy_context_table *context_table = (proxy_context_table *)apr_table_get(r->notes, "context-table");
@@ -97,7 +98,7 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
 
     if ((rv = PROXY_THREAD_LOCK(balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "find_best: CLUSTER: (%s). Lock failed for find_best_worker()", balancer->s->name);
+                     "find_best: CLUSTER: (%s). Lock failed for find_best()", balancer->s->name);
         return NULL;
     }
 
@@ -105,7 +106,7 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
 
     if ((rv = PROXY_THREAD_UNLOCK(balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "find_best: CLUSTER: (%s). Unlock failed for find_best_worker()", balancer->s->name);
+                     "find_best: CLUSTER: (%s). Unlock failed for find_best()", balancer->s->name);
     }
 
     return mycandidate;
