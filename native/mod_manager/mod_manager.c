@@ -1223,6 +1223,7 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
         int j;
         proxy_worker **workers;
         if (strcmp(balancer->s->name, name)) {
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: continue because of no match %s != %s", balancer->s->name, name);
             continue;
         }
         workers = (proxy_worker **)balancer->workers->elts;
