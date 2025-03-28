@@ -90,12 +90,23 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
     }
 
     if (!node_table) {
+        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         node_table = read_node_table(r->pool, node_storage, 0);
+        node_storage->unlock_nodes();
     }
 
-    node_storage->lock_nodes();
+    if ((rv = PROXY_THREAD_LOCK(balancer)) != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
+                     "find_best: CLUSTER: (%s). Lock failed for find_best_worker()", balancer->s->name);
+        return NULL;
+    }
+
     mycandidate = internal_find_best_byrequests(r, balancer, vhost_table, context_table, node_table);
-    node_storage->unlock_nodes();
+
+    if ((rv = PROXY_THREAD_UNLOCK(balancer)) != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
+                     "find_best: CLUSTER: (%s). Unlock failed for find_best_worker()", balancer->s->name);
+    }
 
     return mycandidate;
 }
@@ -254,7 +265,9 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
 
     case AP_WATCHDOG_STATE_RUNNING:
         /* loop thru all workers */
+        ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
         node_table = read_node_table(pool, node_storage, 0);
+        node_storage->unlock_nodes();
         now = apr_time_now();
         if (s) {
             int i;
@@ -272,12 +285,11 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
                 for (n = 0; n < balancer->workers->nelts; n++) {
                     nodeinfo_t *node;
                     int id;
-                    worker = *workers;
+                    worker = *(workers + n);
                     node = table_get_node_route(node_table, worker->s->route, &id);
                     if (node != NULL) {
                         if (node->mess.remove) {
                             /* Already marked for removal */
-                            workers++;
                             continue;
                         }
                         if (node->mess.updatetimelb < (now - lbstatus_recalc_time)) {
@@ -289,13 +301,11 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
                             node_storage->lock_nodes();
                             if (node_storage->read_node(id, &ou) != APR_SUCCESS) {
                                 node_storage->unlock_nodes();
-                                workers++;
                                 continue;
                             }
                             if (ou->mess.remove) {
                                 /* the stored node is already marked for removal */
                                 node_storage->unlock_nodes();
-                                workers++;
                                 continue;
                             }
                             ou->mess.updatetimelb = now;
@@ -323,7 +333,6 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
                             node_storage->unlock_nodes();
                         }
                     }
-                    workers++;
                 }
             }
 
