@@ -104,7 +104,9 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
     }
     */
 
+    ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
     mycandidate = internal_find_best_byrequests(r, balancer, vhost_table, context_table, node_table);
+    node_storage->unlock_nodes();
 
     /*
     if ((rv = PROXY_THREAD_UNLOCK(balancer)) != APR_SUCCESS) {
