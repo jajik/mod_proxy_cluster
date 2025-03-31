@@ -96,18 +96,22 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
         node_storage->unlock_nodes();
     }
 
+    /*
     if ((rv = PROXY_THREAD_LOCK(balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
                      "find_best: CLUSTER: (%s). Lock failed for find_best()", balancer->s->name);
         return NULL;
     }
+    */
 
     mycandidate = internal_find_best_byrequests(r, balancer, vhost_table, context_table, node_table);
 
+    /*
     if ((rv = PROXY_THREAD_UNLOCK(balancer)) != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
                      "find_best: CLUSTER: (%s). Unlock failed for find_best()", balancer->s->name);
     }
+    */
 
     return mycandidate;
 }
