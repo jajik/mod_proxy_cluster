@@ -31,16 +31,18 @@ static proxy_worker *internal_find_best_byrequests(request_rec *r, const proxy_b
                                                    const proxy_context_table *context_table,
                                                    proxy_node_table *node_table)
 {
+    /*
     char *ptr = balancer->workers->elts;
     int sizew = balancer->workers->elt_size;
+    */
+    proxy_worker **workers = (proxy_worker **)balancer->workers->elts;
     proxy_worker *mycandidate = NULL;
     int i;
 
-    for (i = 0; i < balancer->workers->nelts; i++, ptr = ptr + sizew) {
+    for (i = 0; i < balancer->workers->nelts; i++) {
         const nodeinfo_t *node;
         int id;
-        proxy_worker **run = (proxy_worker **)ptr;
-        proxy_worker *worker = *run;
+        proxy_worker *worker = *(workers + i);
 
         if (!PROXY_WORKER_IS_USABLE(worker)) {
             continue;
@@ -296,6 +298,7 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
                     nodeinfo_t *node;
                     int id;
                     worker = *(workers + n);
+                    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, "lbmethod_cluster_watchdog_callback: worker %d/%d route |%s|", n, balancer->workers->nelts, worker->s->route);
                     node = table_get_node_route(node_table, worker->s->route, &id);
                     if (node != NULL) {
                         if (node->mess.remove) {
