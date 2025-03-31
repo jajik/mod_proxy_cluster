@@ -1581,7 +1581,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
         /* if using mod_balancer create or update the worker */
         if (balancer_manage) {
             apr_status_t rv = mod_manager_manage_worker(r, &nodeinfo, &balancerinfo);
-            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: balancer-manager returned %d", rv);
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: balancer-manager I returned %d", rv);
         } else {
             ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: NO balancer-manager");
         }
@@ -1604,7 +1604,7 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
     /* if using mod_balancer create or update the worker */
     if (balancer_manage) {
         apr_status_t rv = mod_manager_manage_worker(r, &nodeinfo, &balancerinfo);
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: balancer-manager returned %d", rv);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: balancer-manager II returned %d", rv);
     } else {
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "process_config: NO balancer-manager");
     }
