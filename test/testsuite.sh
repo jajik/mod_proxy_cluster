@@ -65,9 +65,9 @@ res=0
 IMG_NOVER=$(echo $IMG | cut -d: -f1)
 
 while [ $res -eq 0 ]; do
-    run_test MODCLUSTER-640/testit.sh   "MODCLUSTER-640"
+    MPC_CONF=MODCLUSTER-640/mod_lbmethod_cluster.conf run_test MODCLUSTER-640/testit.sh "MODCLUSTER-640 with mod_proxy_balancer"
     res=$(expr $res + $?)
-    MPC_CONF=MODCLUSTER-640/mod_lbmethod_cluster.conf run_test MODCLUSTER-640/testit.sh   "MODCLUSTER-640 with mod_proxy_balancer"
+    MPC_CONF=MODCLUSTER-640/mod_lbmethod_cluster.conf run_test MODCLUSTER-640/testit.sh "MODCLUSTER-640 with mod_proxy_balancer II"
     res=$(expr $res + $?)
 done;
 
