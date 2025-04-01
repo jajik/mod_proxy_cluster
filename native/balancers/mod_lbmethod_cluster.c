@@ -293,6 +293,8 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
                 ap_proxy_sync_balancer(balancer, s, conf);
                 ap_assert(PROXY_THREAD_UNLOCK(balancer) == APR_SUCCESS);
 
+                ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, "lbmethod_cluster_watchdog_callback: balancer %s has %d workers", balancer->s->name, balancer->workers->nelts);
+
                 workers = (proxy_worker **)balancer->workers->elts;
                 for (n = 0; n < balancer->workers->nelts; n++) {
                     nodeinfo_t *node;
