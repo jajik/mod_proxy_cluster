@@ -1238,7 +1238,7 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
         }
     }
 
-    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: default NULL (conf->balancers->nelts: %d)", conf->balancers->nelts);
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: default NULL (conf->balancers->nelts: %d, name %s, node %d)", conf->balancers->nelts, name, node->mess.id);
     return NULL;
 }
 
