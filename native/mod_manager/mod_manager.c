@@ -1226,6 +1226,9 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
             ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: continue because of no match %s != %s", balancer->s->name, name);
             continue;
         }
+
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: balancer %s has %d workers", balancer->s->name, balancer->workers->nelts);
+
         workers = (proxy_worker **)balancer->workers->elts;
         for (j = 0; j < balancer->workers->nelts; j++, workers++) {
             proxy_worker *worker = *workers;
