@@ -1227,7 +1227,13 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
             continue;
         }
 
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: balancer %s has %d workers", balancer->s->name, balancer->workers->nelts);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: balancer %s has %d workers (BEFORE SYNC)", balancer->s->name, balancer->workers->nelts);
+
+        ap_assert(PROXY_THREAD_LOCK(balancer) == APR_SUCCESS);
+        ap_proxy_sync_balancer(balancer, r->server, conf);
+        ap_assert(PROXY_THREAD_UNLOCK(balancer) == APR_SUCCESS);
+
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: balancer %s has %d workers (AFTER SYNC)", balancer->s->name, balancer->workers->nelts);
 
         workers = (proxy_worker **)balancer->workers->elts;
         for (j = 0; j < balancer->workers->nelts; j++, workers++) {
