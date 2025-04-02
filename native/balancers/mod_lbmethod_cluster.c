@@ -78,7 +78,6 @@ static proxy_worker *internal_find_best_byrequests(request_rec *r, const proxy_b
 static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
 {
     proxy_worker *mycandidate = NULL;
-    apr_status_t rv = APR_SUCCESS;
 
     proxy_vhost_table *vhost_table = (proxy_vhost_table *)apr_table_get(r->notes, "vhost-table");
     proxy_context_table *context_table = (proxy_context_table *)apr_table_get(r->notes, "context-table");
@@ -98,24 +97,9 @@ static proxy_worker *find_best(proxy_balancer *balancer, request_rec *r)
         node_storage->unlock_nodes();
     }
 
-    /*
-    if ((rv = PROXY_THREAD_LOCK(balancer)) != APR_SUCCESS) {
-        ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "find_best: CLUSTER: (%s). Lock failed for find_best()", balancer->s->name);
-        return NULL;
-    }
-    */
-
     ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
     mycandidate = internal_find_best_byrequests(r, balancer, vhost_table, context_table, node_table);
     node_storage->unlock_nodes();
-
-    /*
-    if ((rv = PROXY_THREAD_UNLOCK(balancer)) != APR_SUCCESS) {
-        ap_log_error(APLOG_MARK, APLOG_ERR, rv, r->server,
-                     "find_best: CLUSTER: (%s). Unlock failed for find_best()", balancer->s->name);
-    }
-    */
 
     return mycandidate;
 }
@@ -151,6 +135,11 @@ static const proxy_balancer_method cluster = {"cluster", &find_best, NULL, &rese
  */
 static int lbmethod_cluster_trans(request_rec *r)
 {
+    proxy_vhost_table *vhost_table;
+    proxy_context_table *context_table;
+    proxy_balancer_table *balancer_table;
+    proxy_node_table *node_table;
+
     const char *balancer;
     void *sconf = r->server->module_config;
     const char *use_uri = r->uri;
@@ -159,10 +148,10 @@ static int lbmethod_cluster_trans(request_rec *r)
 
     ap_assert(node_storage->lock_nodes() == APR_SUCCESS);
 
-    proxy_vhost_table *vhost_table = read_vhost_table(r->pool, host_storage, 0);
-    proxy_context_table *context_table = read_context_table(r->pool, context_storage, 0);
-    proxy_balancer_table *balancer_table = read_balancer_table(r->pool, balancer_storage, 0);
-    proxy_node_table *node_table = read_node_table(r->pool, node_storage, 0);
+    vhost_table = read_vhost_table(r->pool, host_storage, 0);
+    context_table = read_context_table(r->pool, context_storage, 0);
+    balancer_table = read_balancer_table(r->pool, balancer_storage, 0);
+    node_table = read_node_table(r->pool, node_storage, 0);
 
     node_storage->unlock_nodes();
 
@@ -293,14 +282,18 @@ static apr_status_t mc_watchdog_callback(int state, void *data, apr_pool_t *pool
                 ap_proxy_sync_balancer(balancer, s, conf);
                 ap_assert(PROXY_THREAD_UNLOCK(balancer) == APR_SUCCESS);
 
-                ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, "lbmethod_cluster_watchdog_callback: balancer %s has %d workers", balancer->s->name, balancer->workers->nelts);
+                ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s,
+                             "lbmethod_cluster_watchdog_callback: balancer %s has %d workers", balancer->s->name,
+                             balancer->workers->nelts);
 
                 workers = (proxy_worker **)balancer->workers->elts;
                 for (n = 0; n < balancer->workers->nelts; n++) {
                     nodeinfo_t *node;
                     int id;
                     worker = *(workers + n);
-                    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, "lbmethod_cluster_watchdog_callback: worker %d/%d route |%s|", n, balancer->workers->nelts, worker->s->route);
+                    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s,
+                                 "lbmethod_cluster_watchdog_callback: worker %d/%d route |%s|", n,
+                                 balancer->workers->nelts, worker->s->route);
                     node = table_get_node_route(node_table, worker->s->route, &id);
                     if (node != NULL) {
                         if (node->mess.remove) {

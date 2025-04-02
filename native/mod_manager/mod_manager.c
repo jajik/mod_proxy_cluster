@@ -1216,24 +1216,30 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
     proxy_server_conf *conf = (proxy_server_conf *)ap_get_module_config(sconf, &proxy_module);
     proxy_balancer *balancer = (proxy_balancer *)conf->balancers->elts;
     if (sscanf(node->mess.Port, "%u", &port) != 1) {
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: something is wrong, node %d port %d", node->mess.id, port);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: something is wrong, node %d port %d",
+                     node->mess.id, port);
         return NULL; /* something is wrong */
     }
     for (i = 0; i < conf->balancers->nelts; i++, balancer++) {
         int j;
         proxy_worker **workers;
         if (strcmp(balancer->s->name, name)) {
-            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: continue because of no match %s != %s", balancer->s->name, name);
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                         "read_shared_by_node: continue because of no match %s != %s", balancer->s->name, name);
             continue;
         }
 
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: balancer %s has %d workers (BEFORE SYNC)", balancer->s->name, balancer->workers->nelts);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                     "read_shared_by_node: balancer %s has %d workers (BEFORE SYNC)", balancer->s->name,
+                     balancer->workers->nelts);
 
         ap_assert(PROXY_THREAD_LOCK(balancer) == APR_SUCCESS);
         ap_proxy_sync_balancer(balancer, r->server, conf);
         ap_assert(PROXY_THREAD_UNLOCK(balancer) == APR_SUCCESS);
 
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: balancer %s has %d workers (AFTER SYNC)", balancer->s->name, balancer->workers->nelts);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                     "read_shared_by_node: balancer %s has %d workers (AFTER SYNC)", balancer->s->name,
+                     balancer->workers->nelts);
 
         workers = (proxy_worker **)balancer->workers->elts;
         for (j = 0; j < balancer->workers->nelts; j++, workers++) {
@@ -1247,7 +1253,9 @@ static const proxy_worker_shared *read_shared_by_node(request_rec *r, nodeinfo_t
         }
     }
 
-    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "read_shared_by_node: default NULL (conf->balancers->nelts: %d, name %s, node %d)", conf->balancers->nelts, name, node->mess.id);
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                 "read_shared_by_node: default NULL (conf->balancers->nelts: %d, name %s, node %d)",
+                 conf->balancers->nelts, name, node->mess.id);
     return NULL;
 }
 
@@ -3111,7 +3119,8 @@ static void print_proxystat(request_rec *r, int reduce_display, nodeinfo_t *node
     const proxy_worker_shared *proxystat = read_shared_by_node(r, node);
     if (!proxystat) {
         status = "NOTOK";
-        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, "print_proxystat: NOTOK for node %d because of NULL proxystat", node->mess.id);
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server,
+                     "print_proxystat: NOTOK for node %d because of NULL proxystat", node->mess.id);
         proxystat = &tmp;
     } else {
         status = proxystat->status & PROXY_WORKER_NOT_USABLE_BITMAP ? "NOTOK" : "OK";
