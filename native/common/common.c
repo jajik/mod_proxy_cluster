@@ -372,6 +372,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
         sizevhost = vhost_table->sizevhost;
         for (i = 0; i < sizevhost; i++) {
             hostinfo_t *vhost = vhost_table->vhost_info + i;
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "comparing %s and %s", hostname, vhost->host);
             if (strcmp(hostname, vhost->host) == 0) {
                 /* add the contexts that match */
                 for (j = 0; j < sizecontext; j++) {
