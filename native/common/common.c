@@ -556,6 +556,9 @@ const char *get_route_balancer(request_rec *r, const proxy_server_conf *conf, co
             if ((route = strchr(sessionid, '.')) != NULL) {
                 route++;
             }
+
+            ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "ROUTE IS |%s| (from %s -> %s)", route, sessionid, strchr(sessionid, '.'));
+
             if (route && *route) {
                 /* Nice we have a route, but make sure we have to serve it */
                 int has_contexts = 0;
