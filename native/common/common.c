@@ -318,7 +318,7 @@ int hassession_byname(request_rec *r, int nodeid, const char *route, const proxy
 
     sessionid = cluster_get_sessionid(r, sticky, uri, &sticky_used);
     if (sessionid) {
-        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "mod_proxy_cluster: found sessionid %s", sessionid);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "mod_proxy_cluster: found sessionid %s", sessionid);
         return 1;
     }
     return 0;
@@ -339,7 +339,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
     const char *luri = r->uri;
 
     if (apr_table_get(r->notes, "proxy-context")) {
-        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: RETURNING CACHED proxy-context");
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_node_context_host: RETURNING CACHED proxy-context");
         return (node_context *)apr_table_get(r->notes, "proxy-context");
     }
 
@@ -353,7 +353,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
 
     /* read the contexts */
     if (sizecontext == 0) {
-        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: ZERO contexts");
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_node_context_host: ZERO contexts");
         return NULL;
     }
     contexts = apr_palloc(r->pool, sizeof(int) * sizecontext);
@@ -368,7 +368,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
         int sizevhost;
         int *contextsok = apr_pcalloc(r->pool, sizeof(int) * sizecontext);
         const char *hostname = ap_get_server_name(r);
-        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: Host: %s", hostname);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_node_context_host: Host: %s", hostname);
         sizevhost = vhost_table->sizevhost;
         for (i = 0; i < sizevhost; i++) {
             hostinfo_t *vhost = vhost_table->vhost_info + i;
@@ -395,7 +395,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
             continue;
         }
         context = &context_table->context_info[j];
-        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server,
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
                      "find_node_context_host: %s node: %d vhost: %d context: %s", uri, context->node, context->vhost,
                      context->context);
     }
@@ -436,7 +436,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
         }
     }
     if (max == 0) {
-        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: max is 0");
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_node_context_host: max is 0");
         return NULL;
     }
 
@@ -475,7 +475,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
         }
     }
     if (nbest == 0) {
-        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: nbest is 0");
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_node_context_host: nbest is 0");
         return NULL;
     }
     best[nbest].node = -1;
@@ -494,7 +494,7 @@ static apr_status_t find_nodedomain(request_rec *r, const char **domain, char *r
     (void)r;
 
     /* XXX JFCLERE!!!! domaininfo_t *dom; */
-    ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_nodedomain: finding node for %s: %s", route, balancer);
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_nodedomain: finding node for %s: %s", route, balancer);
     for (i = 0; i < node_table->sizenode; i++) {
         if (strcmp(node_table->node_info[i].mess.JVMRoute, route) == 0) {
             const nodeinfo_t *ou = &node_table->node_info[i];
@@ -507,7 +507,7 @@ static apr_status_t find_nodedomain(request_rec *r, const char **domain, char *r
         }
     }
 
-    ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_nodedomain: finding domain for %s: %s", route, balancer);
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_nodedomain: finding domain for %s: %s", route, balancer);
     /* We can't find the node, because it was removed... */
     /* XXX: we need a proxy_node_domain for that too!!!
        if (domain_storage->find_domain(&dom, route, balancer ) == APR_SUCCESS) {
@@ -557,7 +557,7 @@ const char *get_route_balancer(request_rec *r, const proxy_server_conf *conf, co
                 route++;
             }
 
-            ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "ROUTE IS |%s| (from %s -> %s)", route, sessionid, strchr(sessionid, '.'));
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "ROUTE IS |%s| (from %s -> %s)", route, sessionid, strchr(sessionid, '.'));
 
             if (route && *route) {
                 /* Nice we have a route, but make sure we have to serve it */
@@ -566,14 +566,14 @@ const char *get_route_balancer(request_rec *r, const proxy_server_conf *conf, co
                 node_context *nodes = find_node_context_host(r, balancer, route, use_alias, vhost_table, context_table,
                                                              node_table, &has_contexts);
                 if (nodes == NULL) {
-                    ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "cluster: No route for %s", route);
+                    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "cluster: No route for %s", route);
                     continue; /* we can't serve context/host for the request with this balancer */
                 }
 
-                ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "cluster: Found route %s", route);
+                ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "cluster: Found route %s", route);
                 if (find_nodedomain(r, &domain, route, &balancer->s->name[BALANCER_PREFIX_LENGTH], node_table) ==
                     APR_SUCCESS) {
-                    ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "cluster: Found balancer %s for %s",
+                    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "cluster: Found balancer %s for %s",
                                  &balancer->s->name[BALANCER_PREFIX_LENGTH], route);
                     /* here we have the route and domain for find_session_route ... */
                     apr_table_setn(r->notes, "session-sticky", sticky_used);
@@ -582,7 +582,7 @@ const char *get_route_balancer(request_rec *r, const proxy_server_conf *conf, co
                     apr_table_setn(r->subprocess_env, "BALANCER_SESSION_ROUTE", route);
                     apr_table_setn(r->subprocess_env, "BALANCER_SESSION_STICKY", sticky_used);
                     if (domain) {
-                        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "cluster: Found domain %s for %s", domain,
+                        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "cluster: Found domain %s for %s", domain,
                                      route);
                         apr_table_setn(r->notes, "CLUSTER_DOMAIN", domain);
                     }
