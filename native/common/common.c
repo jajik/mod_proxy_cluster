@@ -368,7 +368,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
         int sizevhost;
         int *contextsok = apr_pcalloc(r->pool, sizeof(int) * sizecontext);
         const char *hostname = ap_get_server_name(r);
-        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_node_context_host: Host: %s", hostname);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "find_node_context_host: Host: %s (r->hostname |%s| r->server->server_hostname |%s|)", hostname, r->hostname, r->server->server_hostname);
         sizevhost = vhost_table->sizevhost;
         for (i = 0; i < sizevhost; i++) {
             hostinfo_t *vhost = vhost_table->vhost_info + i;
