@@ -339,6 +339,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
     const char *luri = r->uri;
 
     if (apr_table_get(r->notes, "proxy-context")) {
+        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: RETURNING CACHED proxy-context");
         return (node_context *)apr_table_get(r->notes, "proxy-context");
     }
 
@@ -352,6 +353,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
 
     /* read the contexts */
     if (sizecontext == 0) {
+        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: ZERO contexts");
         return NULL;
     }
     contexts = apr_palloc(r->pool, sizeof(int) * sizecontext);
@@ -434,6 +436,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
         }
     }
     if (max == 0) {
+        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: max is 0");
         return NULL;
     }
 
@@ -472,6 +475,7 @@ node_context *find_node_context_host(request_rec *r, const proxy_balancer *balan
         }
     }
     if (nbest == 0) {
+        ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "find_node_context_host: nbest is 0");
         return NULL;
     }
     best[nbest].node = -1;
@@ -559,6 +563,7 @@ const char *get_route_balancer(request_rec *r, const proxy_server_conf *conf, co
                 node_context *nodes = find_node_context_host(r, balancer, route, use_alias, vhost_table, context_table,
                                                              node_table, &has_contexts);
                 if (nodes == NULL) {
+                    ap_log_error(APLOG_MARK, APLOG_TRACE4, 0, r->server, "cluster: No route for %s", route);
                     continue; /* we can't serve context/host for the request with this balancer */
                 }
 
