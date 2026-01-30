@@ -240,7 +240,7 @@ jobs:
     strategy:
         fail-fast: false
         matrix:
-              os: [ ubuntu-latest, ubuntu-24.04-arm ]
+              os: [ ubuntu-latest, ubuntu-24.04-arm, macos-latest ]
     env:
       IMG: local-tomcat
       HTTPD_IMG: local-httpd
@@ -256,13 +256,21 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Setup dependencies
+      - name: Setup dependencies (Ubuntu)
+        if: ${{ matrix.os != 'macos-latest' }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y podman-docker maven git curl iproute2 wcstools
           sudo touch /etc/containers/nodocker
           cd test
           sh setup-dependencies.sh
+      - name: Setup dependencies (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install podman maven git curl iproute2mac wcstools
+          podman machine init
+          podman machine start
+          echo "alias docker=podman" >> ~/.zshrc
       - name: Print network environment
         run: ss -ltp
       - name: Run testsuite
