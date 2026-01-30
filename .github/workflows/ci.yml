@@ -236,7 +236,11 @@ jobs:
           retention-days: 7
 
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+        fail-fast: false
+        matrix:
+              os: [ ubuntu-latest, ubuntu-24.04-arm ]
     env:
       IMG: local-tomcat
       HTTPD_IMG: local-httpd
