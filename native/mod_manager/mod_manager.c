@@ -41,6 +41,10 @@
 #define STYPBIG                "SYNTAX: Type field too big"
 #define SALIBIG                "SYNTAX: Alias field too big"
 #define SCONBIG                "SYNTAX: Context field too big"
+#define SFLUBAD                "SYNTAX: Flushwait field has bad value"
+#define SPNGBAD                "SYNTAX: Ping field has bad value"
+#define STTLBAD                "SYNTAX: TTL field has bad value"
+#define STIMBAD                "SYNTAX: Timeout field has bad value"
 #define SALIBAD                "SYNTAX: Alias without Context"
 #define SCONBAD                "SYNTAX: Context without Alias"
 #define NOCONAL                "SYNTAX: No Context and Alias in APP command"
@@ -1098,6 +1102,8 @@ static char *process_config_balancer(const request_rec *r, const char *key, char
 
 static char *process_config_node(const char *key, char *val, nodeinfo_t *nodeinfo, int *errtype)
 {
+    apr_interval_time_t time;
+
     if (strcasecmp(key, "JVMRoute") == 0) {
         if (strlen(val) >= sizeof(nodeinfo->mess.JVMRoute)) {
             *errtype = TYPESYNTAX;
@@ -1159,19 +1165,39 @@ static char *process_config_node(const char *key, char *val, nodeinfo_t *nodeinf
         }
     }
     if (strcasecmp(key, "flushwait") == 0) {
-        nodeinfo->mess.flushwait = atoi(val) * 1000;
+        if (ap_timeout_parameter_parse(val, &time, "ms") != APR_SUCCESS) {
+            *errtype = TYPESYNTAX;
+            return SFLUBAD;
+        } else {
+            nodeinfo->mess.flushwait = time;
+        }
     }
     if (strcasecmp(key, "ping") == 0) {
-        nodeinfo->mess.ping = apr_time_from_sec(atoi(val));
+        if (ap_timeout_parameter_parse(val, &time, "s") != APR_SUCCESS) {
+            *errtype = TYPESYNTAX;
+            return SPNGBAD;
+        } else {
+            nodeinfo->mess.ping = time;
+        }
     }
     if (strcasecmp(key, "smax") == 0) {
         nodeinfo->mess.smax = atoi(val);
     }
     if (strcasecmp(key, "ttl") == 0) {
-        nodeinfo->mess.ttl = apr_time_from_sec(atoi(val));
+        if (ap_timeout_parameter_parse(val, &time, "s") != APR_SUCCESS) {
+            *errtype = TYPESYNTAX;
+            return STTLBAD;
+        } else {
+            nodeinfo->mess.ttl = time;
+        }
     }
     if (strcasecmp(key, "Timeout") == 0) {
-        nodeinfo->mess.timeout = apr_time_from_sec(atoi(val));
+        if (ap_timeout_parameter_parse(val, &time, "s") != APR_SUCCESS) {
+            *errtype = TYPESYNTAX;
+            return STIMBAD;
+        } else {
+            nodeinfo->mess.timeout = time;
+        }
     }
 
     return NULL;
@@ -2590,7 +2616,9 @@ static apr_status_t decodeenc(char **ptr)
     val = 0;
     while (NULL != ptr[val]) {
         if (ptr[val][0] == '\0') {
-            return APR_SUCCESS; /* special case for no characters */
+            /* special case for no characters */
+            val++;
+            continue;
         }
         for (i = 0, j = 0; ptr[val][i] != '\0'; i++, j++) {
             /* decode it if not already done */
