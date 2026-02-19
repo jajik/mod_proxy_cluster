@@ -64,3 +64,9 @@ $resp = CMD 'INFO', $url;
 ok $resp->is_success;
 %p = parse_response 'INFO', $resp->content;
 ok (@{$p{Hosts}} == $host_count);
+
+END {
+    remove_nodes $url, 'modcluster824';
+    sleep 25; # just to make sure we'll have enough time to get it removed
+}
+

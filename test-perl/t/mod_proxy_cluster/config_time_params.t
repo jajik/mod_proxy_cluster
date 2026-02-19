@@ -109,7 +109,7 @@ ok (@{$p{Nodes}} == 0);
 
 END {
     # Clean after yourself even with failure
-    CMD 'REMOVE-APP', "$url/*", ( JVMRoute => 'test-time' );
+    remove_nodes $url, 'test-time';
     sleep 25;
 }
 

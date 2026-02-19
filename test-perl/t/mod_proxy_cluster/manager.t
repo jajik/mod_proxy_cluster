@@ -33,6 +33,8 @@ $data = GET_BODY $url;
 
 ok (index($data, "Node next") != -1);
 
-# Clean after yourself
-CMD 'REMOVE-APP', "$url/*", ( JVMRoute => 'next' );
-sleep 25; # just to make sure we'll have enough time to get it removed
+END {
+    # Clean after yourself
+    remove_nodes $url, 'next';
+    sleep 25; # just to make sure we'll have enough time to get it removed
+}

@@ -366,8 +366,7 @@ ok (@{$p{Hosts}} == 0);
 
 
 # Clean after yourself
-foreach my $jvmroute ('next', 'spare') {
-    CMD 'REMOVE-APP', "$url/*", ( JVMRoute => $jvmroute );
+END {
+    remove_nodes $url, ('next', 'spare');
+    sleep 25;
 }
-
-sleep 25;

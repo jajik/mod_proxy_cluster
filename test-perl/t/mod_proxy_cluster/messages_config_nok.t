@@ -179,3 +179,9 @@ ok ($resp->header("Mess") eq "SYNTAX: A field is too big");
 $resp = GET "$url/mod_cluster_manager";
 ok $resp->is_success;
 ok (index($resp->as_string, "Node spare") == -1);
+
+END {
+    remove_nodes $url, 'spare';
+    sleep 25;
+}
+

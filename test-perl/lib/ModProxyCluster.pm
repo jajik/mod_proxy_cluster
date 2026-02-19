@@ -13,6 +13,8 @@ our @EXPORT = qw(
   CMD
   parse_params
   parse_response
+  remove_nodes
+  remove_all_nodes
 );
 
 our $VERSION = '0.0.1';
@@ -189,6 +191,18 @@ sub parse_response {
 	return {};
 }
 
+
+sub remove_nodes {
+    my ($url, @node_names) = @_;
+    foreach my $name (@node_names) {
+        CMD 'REMOVE-APP', "$url*", ( JVMRoute => $name );
+    }
+}
+
+sub remove_all_nodes {
+    my $resp = CMD 'INFO', "/*";
+    remove_nodes (map { $_->{JVMRoute} } @{$resp->{Nodes}});
+}
 
 1;
 
