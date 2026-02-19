@@ -11,10 +11,10 @@ use Apache::TestConfig;
 use Apache::TestRequest 'GET';
 
 use ModProxyCluster;
-
-plan tests => 70;
-
 Apache::TestRequest::module("mpc_test_host");
+
+plan tests => 70, need_mpc;
+
 my $hostport = Apache::TestRequest::hostport();
 
 my $url = "http://$hostport/";

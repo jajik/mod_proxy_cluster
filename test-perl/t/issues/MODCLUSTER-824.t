@@ -8,12 +8,13 @@ use warnings;
 use Apache::Test;
 use Apache::TestUtil;
 use Apache::TestConfig;
+use Apache::TestRequest;
 
 use ModProxyCluster;
-
-plan tests => 13;
-
 Apache::TestRequest::module("mpc_test_host");
+
+plan tests => 13, need_mpc;
+
 my $hostport = Apache::TestRequest::hostport();
 
 my $url = "http://$hostport/";

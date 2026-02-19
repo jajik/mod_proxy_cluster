@@ -13,10 +13,10 @@ use HTTP::Request;
 use LWP::UserAgent;
 
 use ModProxyCluster;
-
-plan tests => 27;
-
 Apache::TestRequest::module("mpc_test_host");
+
+plan tests => 27, need_mpc;
+
 my $hostport = Apache::TestRequest::hostport();
 
 my $url = "http://$hostport/";

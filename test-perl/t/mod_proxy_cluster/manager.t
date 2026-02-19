@@ -12,10 +12,10 @@ use Apache::TestRequest 'GET_BODY';
 
 # use Test::More;
 use ModProxyCluster;
-
-plan tests => 4;
-
 Apache::TestRequest::module("mpc_test_host");
+
+plan tests => 4, need_mpc;
+
 my $hostport = Apache::TestRequest::hostport();
 
 my $url = "http://$hostport/mod_cluster_manager";

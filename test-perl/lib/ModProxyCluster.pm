@@ -4,12 +4,14 @@ use v5.32;
 
 require Exporter;
 use HTTP::Request;
-use HTTP::Request::Common;
+use HTTP::Request::Common ();
 use LWP::UserAgent;
+use Apache::TestRequest 'GET';
 
 our @ISA = qw(Exporter);
 
 our @EXPORT = qw(
+  need_mpc
   CMD
   parse_params
   parse_response
@@ -18,6 +20,19 @@ our @EXPORT = qw(
 );
 
 our $VERSION = '0.0.1';
+
+# You have to call `Apache::TestRequest::module(<mpc_host>)` before
+# running this function.
+# `need` or `need_module` for 'proxy_cluster' won't work because it's
+# not a built-in module and the resolver is not dynamic
+sub need_mpc {
+    my $res = GET '/mod_cluster_manager';
+    if ($res->code != 404) {
+        return 1; # the module is alive
+    }
+    Apache::Test::skip_reason("/mod_cluster_manager endpoint returned 404");
+    return 0;
+}
 
 sub CMD_internal {
 	my ($cmd, $url, $params) = @_;
