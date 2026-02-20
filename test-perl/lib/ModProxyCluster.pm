@@ -37,23 +37,23 @@ sub need_mpc {
 }
 
 sub CMD_internal {
-	my ($cmd, $url, $params) = @_;
+	my ($cmd, $path, $params) = @_;
 	my $header = [];
 
 	my $ua = LWP::UserAgent->new();
-	my $request = HTTP::Request->new($cmd, $ROOT . $url, $header, $params);
+	my $request = HTTP::Request->new($cmd, $ROOT . $path, $header, $params);
 
 	return $ua->request($request);
 }
 
 sub concat_params {
-	my (%params) = @_;
+	my $params = shift @_;
 	my $p = "";
 	my $d = "";
 
-	foreach my $k (sort(keys %params)) {
-		if ($params{$k}) {
-			$p .= $d . $k . '=' . $params{$k};
+	foreach my $k (sort(keys %$params)) {
+		if ($params->{$k}) {
+			$p .= $d . $k . '=' . $params->{$k};
 			$d = "&";
 		}
 	}
@@ -177,12 +177,14 @@ sub parse_DUMP {
 }
 
 sub CMD {
-	my ($cmd, $url, %params) = @_;
+	my ($cmd, $params, $path) = @_;
 	my @mpc_commands = qw(CONFIG ENABLE-APP DISABLE-APP STOP-APP REMOVE-APP STOP-APP-RSP
 				STATUS STATUS-RSP INFO INFO-RSP DUMP DUMP-RSP PING PING-RSP);
+    $path = '' if not defined $path;
+    $params = {} if not defined $params;
 
 	if (grep /^$cmd$/, @mpc_commands) {
-		return CMD_internal $cmd, $url, concat_params %params;
+		return CMD_internal $cmd, $path, concat_params $params;
 	}
 
 	return HTTP::Response->new();
@@ -210,14 +212,14 @@ sub parse_response {
 
 
 sub remove_nodes {
-    my ($url, @node_names) = @_;
+    my @node_names = @_;
     foreach my $name (@node_names) {
-        CMD 'REMOVE-APP', "$url*", ( JVMRoute => $name );
+        CMD 'REMOVE-APP', { JVMRoute => $name }, "*";
     }
 }
 
 sub remove_all_nodes {
-    my $resp = CMD 'INFO', "/*";
+    my $resp = CMD 'INFO';
     remove_nodes (map { $_->{JVMRoute} } @{$resp->{Nodes}});
 }
 
