@@ -56,7 +56,7 @@ ok $resp->is_success;
 ok (@{$p{Hosts}} == $host_count + 5);
 
 # Clean after yourself
-CMD 'REMOVE-APP', { JVMRoute => 'modcluster824' }, "*";
+remove_nodes 'modcluster824';
 sleep 25; # just to make sure we'll have enough time to get it removed
 
 $resp = CMD 'INFO';

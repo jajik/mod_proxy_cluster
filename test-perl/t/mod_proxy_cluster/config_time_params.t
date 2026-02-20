@@ -38,7 +38,7 @@ ok($node->{ping} == 10);
 ok($node->{timeout} == 0);
 
 # Clean after yourself
-CMD 'REMOVE-APP', { JVMRoute => 'test-time' }, "*";
+remove_nodes 'test-time';
 
 ##################################
 ### Check custom valid values  ###
@@ -62,7 +62,7 @@ ok($node->{ping} == 65);
 ok($node->{timeout} == 10);
 
 # Clean after yourself
-CMD 'REMOVE-APP', { JVMRoute => 'test-time' }, "*";
+remove_nodes 'test-time';
 sleep 25; # to have enough time for the removal
 
 #################################

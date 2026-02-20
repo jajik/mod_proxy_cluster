@@ -38,7 +38,7 @@ ok ($p{Hosts}->[0]{Alias} eq 'testalias');
 ok ($p{Hosts}->[1]{Alias} eq 'example');
 
 # Clean after yourself
-CMD 'REMOVE-APP', { JVMRoute => 'issue-329' }, "*";
+remove_nodes 'issue-329';
 sleep 25; # just to make sure we'll have enough time to get it removed
 
 #################################################
@@ -63,7 +63,7 @@ ok ($p{Hosts}->[0]{Alias} eq 'testalias');
 ok ($p{Hosts}->[1]{Alias} eq 'example');
 
 # Clean after yourself
-CMD 'REMOVE-APP', { JVMRoute => 'issue-329' }, "*";
+remove_nodes 'issue-329';
 sleep 25; # just to make sure we'll have enough time to get it removed
 
 #################################################
