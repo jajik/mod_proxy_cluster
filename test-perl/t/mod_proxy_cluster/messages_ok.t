@@ -18,7 +18,7 @@ plan tests => 210, need_mpc;
 
 my $hostport = Apache::TestRequest::hostport();
 
-my $url = "http://$hostport/";
+my $url = "/";
 my $resp = GET $url;
 
 ok $resp->is_success;

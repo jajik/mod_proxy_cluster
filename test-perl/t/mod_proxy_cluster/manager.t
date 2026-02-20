@@ -18,7 +18,7 @@ plan tests => 4, need_mpc;
 
 my $hostport = Apache::TestRequest::hostport();
 
-my $url = "http://$hostport/mod_cluster_manager";
+my $url = "/mod_cluster_manager";
 my $data = GET_BODY $url;
 
 ok (index($data, "mod_cluster/2.0.0.Alpha1-SNAPSHOT") != -1);

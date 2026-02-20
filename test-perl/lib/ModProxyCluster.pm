@@ -21,6 +21,7 @@ our @EXPORT = qw(
 );
 
 our $VERSION = '0.0.1';
+our $ROOT = Apache::TestRequest::module2url('mpc_test_host', { path => '' });
 
 # You have to call `Apache::TestRequest::module(<mpc_host>)` before
 # running this function.
@@ -40,7 +41,7 @@ sub CMD_internal {
 	my $header = [];
 
 	my $ua = LWP::UserAgent->new();
-	my $request = HTTP::Request->new($cmd, $url, $header, $params);
+	my $request = HTTP::Request->new($cmd, $ROOT . $url, $header, $params);
 
 	return $ua->request($request);
 }
