@@ -21,16 +21,6 @@ my $hostport = Apache::TestRequest::hostport();
 
 my $url = "http://$hostport/";
 
-# needed in order to send the same parameter twice
-sub CMD_internal {
-	my ($cmd, $url, $params) = @_;
-	my $header = [];
-
-	my $ua = LWP::UserAgent->new();
-	my $request = HTTP::Request->new($cmd, $url, $header, $params);
-
-	return $ua->request($request);
-}
 
 my $resp = CMD 'CONFIG', $url, ( JVMRoute => "issue-329", Context => "/news,/test", Alias => "testalias,example" );
 ok $resp->is_success;
