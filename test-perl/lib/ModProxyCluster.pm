@@ -13,6 +13,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(
   need_mpc
   CMD
+  CMD_internal
   parse_params
   parse_response
   remove_nodes
