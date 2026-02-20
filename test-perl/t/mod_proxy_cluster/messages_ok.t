@@ -16,11 +16,7 @@ Apache::TestRequest::module("mpc_test_host");
 
 plan tests => 210, need_mpc;
 
-my $hostport = Apache::TestRequest::hostport();
-
-my $url = "/";
-my $resp = GET $url;
-
+my $resp = GET "/";
 ok $resp->is_success;
 ok (index($resp->as_string, "mod_cluster/2.0.0.Alpha1-SNAPSHOT") != -1);
 
@@ -29,12 +25,12 @@ ok (index($resp->as_string, "mod_cluster/2.0.0.Alpha1-SNAPSHOT") != -1);
 ##### CONFIG #####
 ##################
 
-$resp = CMD 'CONFIG', $url, ( JVMRoute => 'spare' );
+$resp = CMD 'CONFIG', , { JVMRoute => 'spare' };
 
 ok $resp->is_success;
 ok ($resp->content eq "");
 
-$resp = GET "$url/mod_cluster_manager";
+$resp = GET "/mod_cluster_manager";
 
 ok $resp->is_success;
 ok (index($resp->as_string, "Node spare") != -1);
@@ -44,7 +40,7 @@ ok (index($resp->as_string, "Node spare") != -1);
 ##################
 
 foreach my $jvmroute ('next', 'spare') {
-    $resp = CMD 'STATUS', $url, ( JVMRoute => $jvmroute );
+    $resp = CMD 'STATUS', { JVMRoute => $jvmroute };
 
     ok $resp->is_success;
 
@@ -61,7 +57,7 @@ foreach my $jvmroute ('next', 'spare') {
 #####  INFO  #####
 ##################
 
-$resp = CMD 'INFO', $url;
+$resp = CMD 'INFO';
 
 ok $resp->is_success;
 my %p = parse_response 'INFO', $resp->content;
@@ -89,7 +85,7 @@ for my $node (@{$p{Nodes}}) {
 #####  DUMP  #####
 ##################
 
-$resp = CMD 'DUMP', $url;
+$resp = CMD 'DUMP';
 
 ok $resp->is_success;
 
@@ -132,7 +128,7 @@ for my $node (@{$p{Nodes}}) {
 my @status_opts = qw( Type JVMRoute State id );
 	
 for my $jvmroute ('next', 'spare') {
-	$resp = CMD 'STATUS', $url, ( JVMRoute => $jvmroute );
+	$resp = CMD 'STATUS', { JVMRoute => $jvmroute };
 	
 	ok $resp->is_success;
 	
@@ -152,7 +148,7 @@ for my $jvmroute ('next', 'spare') {
 ##################
 my @ping_opts = qw( Type State id );
 
-$resp = CMD 'PING', $url;
+$resp = CMD 'PING';
 
 ok $resp->is_success;
 
@@ -162,7 +158,7 @@ ok (keys %p == @ping_opts);
 ok ($p{Type} eq 'PING-RSP');
 
 for my $jvmroute ('next', 'spare') {
-	$resp = CMD 'PING', $url, ( JVMRoute => $jvmroute );
+	$resp = CMD 'PING', { JVMRoute => $jvmroute };
 	
 	ok $resp->is_success;
 	
@@ -182,6 +178,7 @@ for my $jvmroute ('next', 'spare') {
 ######################
 
 # TODO: A better way..?
+my $hostport = Apache::TestRequest::hostport();
 Apache::TestRequest::module("fake_cgi_app");
 my $apphostport = Apache::TestRequest::hostport();
 my ($apphost, $appport) = split ':', $apphostport;
@@ -192,11 +189,11 @@ $resp = GET $app;
 
 ok $resp->is_error;
 
-$resp = CMD 'CONFIG', $url, ( JVMRoute => 'app', Host => $apphost, Port => $appport, Type => 'http' );
+$resp = CMD 'CONFIG', { JVMRoute => 'app', Host => $apphost, Port => $appport, Type => 'http' };
 ok $resp->is_success;
 
 
-$resp = CMD 'ENABLE-APP', $url, ( JVMRoute => 'app', Context => '/news', Alias => $apphost );
+$resp = CMD 'ENABLE-APP', { JVMRoute => 'app', Context => '/news', Alias => $apphost };
 
 ok $resp->is_success;
 ok ($resp->content eq "");
@@ -210,7 +207,7 @@ ok $resp->is_success;
 ok (index($resp->as_string, "Fake App!") != -1);
 
 # Check whether INFO knows about the app
-$resp = CMD 'INFO', $url;
+$resp = CMD 'INFO';
 
 ok $resp->is_success;
 %p = parse_response 'INFO', $resp->content;
@@ -223,7 +220,7 @@ ok ($p{Contexts}->[0]{Status} eq 'ENABLED');
 ok ($p{Hosts}->[0]{Alias} eq $apphost);
 
 # Check whether DUMP knows about the app
-$resp = CMD 'DUMP', $url;
+$resp = CMD 'DUMP';
 
 ok $resp->is_success;
 %p = parse_response 'DUMP', $resp->content;
@@ -242,7 +239,7 @@ ok ($p{Hosts}->[0]{vhost} == $p{Contexts}->[0]{vhost});
 ##### DISABLE-APP #####
 #######################
 
-$resp = CMD 'DISABLE-APP', $url, ( JVMRoute => 'app', Context => '/news', Alias => $apphost );
+$resp = CMD 'DISABLE-APP', { JVMRoute => 'app', Context => '/news', Alias => $apphost };
 
 ok $resp->is_success;
 ok ($resp->content eq "");
@@ -251,7 +248,7 @@ $resp = GET $app;
 ok $resp->is_error;
 
 # Check whether INFO knows about the app
-$resp = CMD 'INFO', $url;
+$resp = CMD 'INFO';
 
 ok $resp->is_success;
 %p = parse_response 'INFO', $resp->content;
@@ -264,7 +261,7 @@ ok ($p{Contexts}->[0]{Status} eq 'DISABLED');
 ok ($p{Hosts}->[0]{Alias} eq $apphost);
 
 # Check whether DUMP knows about the app
-$resp = CMD 'DUMP', $url;
+$resp = CMD 'DUMP';
 
 ok $resp->is_success;
 %p = parse_response 'DUMP', $resp->content;
@@ -282,10 +279,10 @@ ok ($p{Hosts}->[0]{vhost} == $p{Contexts}->[0]{vhost});
 ######################
 #####  STOP-APP  #####
 ######################
-CMD 'ENABLE-APP', $url, ( JVMRoute => 'app', Context => '/news', Alias => $apphost );
+CMD 'ENABLE-APP', { JVMRoute => 'app', Context => '/news', Alias => $apphost };
 
 my @stop_opts = qw( Type JvmRoute Alias Context Requests );
-$resp = CMD 'STOP-APP', $url, ( JVMRoute => 'app', Context => '/news', Alias => $apphost );
+$resp = CMD 'STOP-APP', { JVMRoute => 'app', Context => '/news', Alias => $apphost };
 
 ok $resp->is_success;
 %p = parse_response 'STOP-APP', $resp->content;
@@ -300,7 +297,7 @@ $resp = GET $app;
 ok $resp->is_error;
 
 # Check whether INFO knows about the app
-$resp = CMD 'INFO', $url;
+$resp = CMD 'INFO';
 
 ok $resp->is_success;
 %p = parse_response 'INFO', $resp->content;
@@ -313,7 +310,7 @@ ok ($p{Contexts}->[0]{Status} eq 'STOPPED');
 ok ($p{Hosts}->[0]{Alias} eq $apphost);
 
 # Check whether DUMP knows about the app
-$resp = CMD 'DUMP', $url;
+$resp = CMD 'DUMP';
 
 ok $resp->is_success;
 %p = parse_response 'DUMP', $resp->content;
@@ -332,9 +329,9 @@ ok ($p{Hosts}->[0]{vhost} == $p{Contexts}->[0]{vhost});
 ######################
 ##### REMOVE-APP #####
 ######################
-CMD 'ENABLE-APP', $url, ( JVMRoute => 'app', Context => '/news', Alias => $apphost );
+CMD 'ENABLE-APP', { JVMRoute => 'app', Context => '/news', Alias => $apphost };
 
-$resp = CMD 'REMOVE-APP', $url, ( JVMRoute => 'app', Context => '/news', Alias => $apphost );
+$resp = CMD 'REMOVE-APP', { JVMRoute => 'app', Context => '/news', Alias => $apphost };
 
 ok $resp->is_success;
 
@@ -344,7 +341,7 @@ $resp = GET $app;
 ok $resp->is_error;
 
 # Check whether INFO knows about the app
-$resp = CMD 'INFO', $url;
+$resp = CMD 'INFO';
 
 ok $resp->is_success;
 %p = parse_response 'INFO', $resp->content;
@@ -354,7 +351,7 @@ ok (@{$p{Contexts}} == 0);
 ok (@{$p{Hosts}} == 0);
 
 # Check whether DUMP knows about the app
-$resp = CMD 'DUMP', $url;
+$resp = CMD 'DUMP';
 
 ok $resp->is_success;
 %p = parse_response 'DUMP', $resp->content;
@@ -367,6 +364,6 @@ ok (@{$p{Hosts}} == 0);
 
 # Clean after yourself
 END {
-    remove_nodes $url, ('next', 'spare');
+    remove_nodes 'next', 'spare';
     sleep 25;
 }
