@@ -18,9 +18,7 @@ Apache::TestRequest::module("mpc_test_host");
 plan tests => 27, need_mpc;
 
 my $hostport = Apache::TestRequest::hostport();
-
-my $url = "http://$hostport/";
-
+my $url = "/";
 
 my $resp = CMD 'CONFIG', $url, ( JVMRoute => "issue-329", Context => "/news,/test", Alias => "testalias,example" );
 ok $resp->is_success;

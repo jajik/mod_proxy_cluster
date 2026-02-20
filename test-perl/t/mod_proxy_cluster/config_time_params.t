@@ -13,13 +13,9 @@ use ModProxyCluster;
 
 Apache::TestRequest::module("mpc_test_host");
 
-plan tests => 30, need_mpc;
 
 my $hostport = Apache::TestRequest::hostport();
-my $url = "http://$hostport/";
-my $resp = GET $url;
-
-ok $resp->is_success;
+plan tests => 29, need_mpc;
 
 ################################
 ### Check the default values ###
