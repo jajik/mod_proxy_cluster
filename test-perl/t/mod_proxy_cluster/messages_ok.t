@@ -14,7 +14,7 @@ use Apache::TestRequest 'GET';
 use ModProxyCluster;
 Apache::TestRequest::module("mpc_test_host");
 
-plan tests => 210, need_mpc;
+plan tests => 214, need_mpc;
 
 my $resp = GET "/";
 ok $resp->is_success;
@@ -24,16 +24,19 @@ ok (index($resp->as_string, "mod_cluster/2.0.0.Alpha1-SNAPSHOT") != -1);
 ##################
 ##### CONFIG #####
 ##################
+my $port = 9900;
+foreach my $jvmroute ('next', 'spare') {
+    $resp = CMD 'CONFIG', { JVMRoute => $jvmroute, port => $port };
+    # to prevent conflict
+    $port++;
+    ok $resp->is_success;
+    ok ($resp->content eq "");
 
-$resp = CMD 'CONFIG', , { JVMRoute => 'spare' };
+    $resp = GET "/mod_cluster_manager";
 
-ok $resp->is_success;
-ok ($resp->content eq "");
-
-$resp = GET "/mod_cluster_manager";
-
-ok $resp->is_success;
-ok (index($resp->as_string, "Node spare") != -1);
+    ok $resp->is_success;
+    ok (index($resp->as_string, "Node $jvmroute") != -1);
+}
 
 ##################
 ##### STATUS #####
@@ -43,8 +46,7 @@ foreach my $jvmroute ('next', 'spare') {
     $resp = CMD 'STATUS', { JVMRoute => $jvmroute };
 
     ok $resp->is_success;
-
-    my %p = parse_response 'CONFIG', $resp->content;
+    my %p = parse_response 'STATUS', $resp->content;
 
     ok ($p{JVMRoute} eq $jvmroute);
     ok ($p{Type} eq 'STATUS-RSP');
