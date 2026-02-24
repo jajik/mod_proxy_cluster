@@ -1610,7 +1610,7 @@ static proxy_worker *internal_process_worker(proxy_worker *worker, int checking_
     }
     if (worker->s->index == -1) {
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
-                     "find_session_route: byrequests balancer skipping REMOVED worker");
+                     "find_session_route: byrequests balancer skipping REMOVED worker (helper->index %d, name: %s)", helper->index, worker->s ? worker->s->name : "NULL");
         return NULL; /* marked removed */
     }
     if (helper->index != worker->s->index) {
