@@ -34,25 +34,31 @@ runtomcatbatch() {
 
     # test the tomcats
     sleep 20
-    tomcat_all_test_app $tomcat_count
-    if [ $? -ne 0 ]; then
-      echo "runtomcatbatch tomcat_all_test_app $tomcat_count FAILED!"
-      exit 1
-    fi
+    for i in $(seq $t 10);
+    do
+        (tomcat_test_app $i)
+        if [ $? -ne 0 ]; then
+            echo "$(date) runtomcatbatch testing tomcat$i FAILED!"
+            exit 1
+        fi
+    done
 
     # "load test" 9 of them
     tomcat_all_run_ab $tomcat_count
     if [ $? -ne 0 ]; then
-      echo "runtomcatbatch tomcat_all_run_ab $tomcat_count FAILED!"
+      echo "$(date) runtomcatbatch tomcat_all_run_ab $tomcat_count FAILED!"
       exit 1
     fi
 
     # retest
-    tomcat_all_test_app $tomcat_count
-    if [ $? -ne 0 ]; then
-      echo "runtomcatbatch tomcat_all_test_app $tomcat_count FAILED!"
-      exit 1
-    fi
+    for i in $(seq $t 10);
+    do
+        (tomcat_test_app $i)
+        if [ $? -ne 0 ]; then
+            echo "$(date) runtomcatbatch testing tomcat$i FAILED!"
+            exit 1
+        fi
+    done
 
     # stop the tomcats
     for i in $(seq $t 10);

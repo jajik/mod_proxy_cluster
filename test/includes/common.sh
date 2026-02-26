@@ -357,17 +357,3 @@ tomcat_test_app() {
     fi
 }
 
-#
-# Run tomcat_test for tomcat containers [2..$1]
-tomcat_all_test_app() {
-    tc=2
-    while true
-    do
-        tomcat_test_app $tc || exit 1
-        tc=$(expr $tc + 1)
-        if [ $tc -gt $1 ]; then
-            echo "tomcat_tests $tc Done!"
-            break
-        fi
-    done
-}
