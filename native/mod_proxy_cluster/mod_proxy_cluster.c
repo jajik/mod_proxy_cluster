@@ -1158,7 +1158,7 @@ static apr_status_t proxy_cluster_try_pingpong(request_rec *r, proxy_worker *wor
         return status;
     }
 
-    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "proxy_cluster_try_pingpong: connected to backend");
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, status, r->server, "proxy_cluster_try_pingpong: connected to backend");
 
     if (strcasecmp(scheme, "AJP") == 0) {
         status = ajp_handle_cping_cpong(backend->sock, r, timeout);
