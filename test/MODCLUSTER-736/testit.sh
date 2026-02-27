@@ -245,7 +245,7 @@ runmodcluster736() {
             exit 1
         fi
         sleep 20
-        tomcat_test_app 5
+        (tomcat_test_app 5)
         if [ $? -ne 0 ]; then
             echo "tomcat_test_app 5: runmodcluster736 Failed!"
             exit 1
