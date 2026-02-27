@@ -352,6 +352,9 @@ tomcat_all_run_ab() {
 tomcat_test_app() {
     CODE=$(curl -s -o /dev/null -m 20 -w "%{http_code}" http://localhost:8090/tomcat$1/test.jsp)
     if [ ${CODE} != "200" ]; then
+        echo "##########################"
+        docker ps -a
+        echo "##########################"
         echo "Failed can't reach tomcat$1: ${CODE}"
         exit 1
     fi
