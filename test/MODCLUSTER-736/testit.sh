@@ -237,15 +237,11 @@ runmodcluster736() {
         fi
         tomcat_remove 2
         MPC_NAME=MODCLUSTER-736 tomcat_start 5
+        tomcat_start_webapp 5
 
         tomcat_wait_for_n_nodes 3
         if [ $? -ne 0 ]; then
             echo "tomcat_wait_for_n_nodes 3: runmodcluster736 Failed!"
-            exit 1
-        fi
-        tomcat_start_webapp 5
-        if [ $? -ne 0 ]; then
-            echo "tomcat_start_webapp 5: runmodcluster736 Failed!"
             exit 1
         fi
         sleep 20
