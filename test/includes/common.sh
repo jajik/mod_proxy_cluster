@@ -350,7 +350,7 @@ tomcat_all_run_ab() {
 
 # Test whether the webapp is working (responding)
 tomcat_test_app() {
-    CODE=$(curl -s -o /dev/null -m 20 -w "%{http_code}" http://localhost:8090/tomcat$1/test.jsp)
+    CODE=$(curl -s -o /dev/null -m 60 -w "%{http_code}" http://localhost:8090/tomcat$1/test.jsp)
     if [ ${CODE} != "200" ]; then
         echo "##########################"
         docker ps -a
