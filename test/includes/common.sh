@@ -123,7 +123,7 @@ httpd_wait_until_ready() {
 httpd_remove() {
     for i in $(docker ps -a | grep "$HTTPD_IMG\|MODCLUSTER\|JBCS\|${MPC_NAME:-httpd-mod_proxy_cluster}" | cut -f1 -d' ');
     do
-        docker stop $i
+        docker stop $i || true
         docker rm $i
     done
 }
