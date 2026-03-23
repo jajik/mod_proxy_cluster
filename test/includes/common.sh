@@ -45,7 +45,7 @@ run_test() {
         echo "###########################################"
         docker exec ${httpd_cont} sh -c "find / -name '*.gcda' 2> /dev/null"
         echo "###########################################"
-        docker exec ${httpd_cont} sh -c "cd /native; gcovr -r . --json /coverage/coverage-$f.json > /coverage/coverage-$f.log 2>&1"
+        docker exec ${httpd_cont} sh -c "cd /; gcovr -r . --json /coverage/coverage-$f.json > /coverage/coverage-$f.log 2>&1"
         docker exec ${httpd_cont} sh -c "cd /native; lcov --capture --directory . --output-file /coverage/coverage-$f.info  > /coverage/coverage-lcov-$f.log 2>&1"
 
         for f in $(docker exec ${httpd_cont} ls /coverage/); do
