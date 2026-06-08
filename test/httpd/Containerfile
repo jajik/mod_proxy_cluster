@@ -1,4 +1,4 @@
-FROM fedora:42 AS builder
+FROM fedora:44 AS builder
 
 ARG HTTPD_SOURCES="https://dlcdn.apache.org/httpd/httpd-2.4.68.tar.gz"
 
@@ -43,7 +43,7 @@ RUN for m in advertise mod_proxy_cluster balancers mod_manager; \
 
 RUN rm -rf /test/httpd/mod_proxy_cluster
 
-FROM fedora:42
+FROM fedora:44
 
 ENV CONF=httpd/mod_proxy_cluster.conf
 
