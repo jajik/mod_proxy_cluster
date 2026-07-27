@@ -14,7 +14,7 @@ MPC_NAME=MODCLUSTER-736 httpd_start
 # Start a bunch ($1, or 6 if no argument is given) of tomcat
 # containers, then test them and stop them
 runtomcatbatch() {
-    if [ $1 ]; then
+    if [ -n "$1" ]; then
       t=$1
     else
       t=5 # default value when no argument is given
@@ -122,6 +122,7 @@ singlecycle() {
     tomcat_run_ab $1 || exit 1
     echo "Testing(3) tomcat$1"
     tomcat_shutdown $1 || exit 1
+    i=0
     while true
     do
         curl -s -m 20 http://localhost:8090/mod_cluster_manager | grep Node | grep tomcat$1 > /dev/null

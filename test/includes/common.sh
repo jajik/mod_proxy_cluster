@@ -68,6 +68,7 @@ httpd_start() {
         echo "You can config those with envars MPC_SOURCES, MPC_BRANCH, MPC_CONF, MPC_NAME respectively"
     fi
     docker run -d --network=mod_proxy_cluster_testsuite_net -p 8090:8090 \
+               --dns-opt ndots:0 \
                --ulimit nofile=65536:65536 --name ${MPC_NAME:-httpd-mod_proxy_cluster} \
                -e MPC_NAME=${MPC_NAME:-httpd-mod_proxy_cluster} \
                -e CONF=${MPC_CONF:-httpd/mod_proxy_cluster.conf} \
@@ -144,6 +145,7 @@ tomcat_start() {
 
     echo "$(date) Starting tomcat$1"
     nohup docker run --network=mod_proxy_cluster_testsuite_net \
+                                    --dns-opt ndots:0 \
                                     -p $shutport:$shutport \
                                     -e tomcat_address=tomcat$1 \
                                     -e tomcat_port_offset=${OFFSET:-$DEFAULT_OFFSET} \
