@@ -2204,14 +2204,21 @@ static void init_proxy_worker(server_rec *server, nodeinfo_t *node, proxy_worker
     }
 }
 
-static void reenable_proxy_worker(server_rec *server, nodeinfo_t *node, proxy_worker *worker, nodeinfo_t *nodeinfo,
-                                  const proxy_server_conf *the_conf)
+static int reenable_proxy_worker(server_rec *server, nodeinfo_t *node, proxy_worker *worker, nodeinfo_t *nodeinfo,
+                                 const proxy_server_conf *the_conf)
 {
     char *ptr;
     proxy_cluster_helper *helper;
     helper = (proxy_cluster_helper *)worker->context;
-    helper->count_active = 0;
-    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, server, "reenable_proxy_worker: (%d %d)", helper->index, node->mess.id);
+
+    ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, server, "reenable_proxy_worker: (%d %d) count_active: %d",
+                 helper->index, node->mess.id, helper->count_active);
+
+    if (helper->count_active != 0) {
+        node->mess.lastcleantry = apr_time_now();
+        return -1; /* caller must retry */
+    }
+
     /* XXX: BAD IDEA!!! helper->shared = worker->s; */
     helper->isinnodes = 1;
     /* XXX: BAD IDEA!! helper->index = node->mess.id; */
@@ -2219,6 +2226,7 @@ static void reenable_proxy_worker(server_rec *server, nodeinfo_t *node, proxy_wo
     worker->s = (proxy_worker_shared *)(ptr + NODEOFFSET);
     /* merge the "new" node information */
     init_proxy_worker(server, nodeinfo, worker, the_conf);
+    return 0;
 }
 
 /*

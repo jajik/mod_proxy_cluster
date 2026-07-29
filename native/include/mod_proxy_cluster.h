@@ -79,9 +79,11 @@ struct balancer_method
      * @param worker the proxy_worker to re enable
      * @param nodeinfo pointer to node structure we are creating
      * @param the_conf the proxy_server_conf from proxy_node_getid()
+     * @return 0 on success, -1 if in-flight requests are still active (caller
+     *         should retry; node->mess.lastcleantry is updated in that case)
      */
-    void (*reenable_proxy_worker)(server_rec *s, nodeinfo_t *node, proxy_worker *worker, nodeinfo_t *nodeinfo,
-                                  const proxy_server_conf *the_conf);
+    int (*reenable_proxy_worker)(server_rec *s, nodeinfo_t *node, proxy_worker *worker, nodeinfo_t *nodeinfo,
+                                 const proxy_server_conf *the_conf);
 
     /**
      * Get a free id in the node table

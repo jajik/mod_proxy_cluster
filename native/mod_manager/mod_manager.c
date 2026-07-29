@@ -899,14 +899,6 @@ static proxy_worker *proxy_node_getid(request_rec *r, const nodeinfo_t *nodeinfo
     return NULL;
 }
 
-static void reenable_proxy_worker(request_rec *r, nodeinfo_t *node, proxy_worker *worker, nodeinfo_t *nodeinfo,
-                                  const proxy_server_conf *the_conf)
-{
-    if (balancerhandler != NULL) {
-        balancerhandler->reenable_proxy_worker(r->server, node, worker, nodeinfo, the_conf);
-    }
-}
-
 static int proxy_node_get_free_id(request_rec *r, int node_table_size)
 {
     if (balancerhandler != NULL) {
@@ -1509,7 +1501,13 @@ static char *process_config(request_rec *r, char **ptr, int *errtype)
         ap_assert(the_conf);
 
         /* so the scheme, hostname and port correspond to worker which was removed and readded */
-        reenable_proxy_worker(r, workernode, worker, &nodeinfo, the_conf);
+        if (balancerhandler->reenable_proxy_worker(r->server, workernode, worker, &nodeinfo, the_conf) != 0) {
+            ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                         "process_config: worker %d (%s) re-enable deferred (requests in flight)", id,
+                         nodeinfo.mess.JVMRoute);
+            loc_unlock_nodes();
+            return NULL;
+        }
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
                      "process_config: reenable_proxy_worker scheme %s hostname %s port %d route %s name %s id: %d",
                      worker->s->scheme, worker->s->hostname_ex, worker->s->port, worker->s->route,
