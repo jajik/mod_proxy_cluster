@@ -143,14 +143,15 @@ jobs:
       - name: Install clang-tidy
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy
+          sudo apt-get install -y clang-tidy apache2-dev
       - name: Check naming conventions
         run: |
           code=0
           cd mod_proxy_cluster/native
           for file in */*.c */*.h; do
-            output=$(clang-tidy --checks='-*,readability-identifier-naming' "$file" -- -I/usr/include/apache2 -I/usr/include/apr-1.0 2>&1 | grep 'warning:.*identifier naming' || true)
-            if [ -z "$output" ]; then
+            status=0
+            output=$(clang-tidy --warnings-as-errors='-*,readability-identifier-naming' "$file" -- -I/usr/include/apache2 -I/usr/include/apr-1.0 -I./include 2>&1) || status=$?
+            if [ $status -eq 0 ]; then
               printf "%-42s ... OK\n" "$file"
             else
               echo "$output"
