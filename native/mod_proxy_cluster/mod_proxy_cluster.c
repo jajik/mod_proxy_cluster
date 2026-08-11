@@ -404,27 +404,27 @@ static void create_worker_arrange_shared_mem(proxy_server_conf *conf, proxy_work
     pair_worker_node(worker->s, node);
 
 #ifdef PROXY_WORKER_EXT_NAME_SIZE
-    strncpy(worker->s->name_ex, shared->name_ex, sizeof(worker->s->name_ex));
+    PROXY_STRNCPY(worker->s->name_ex, shared->name_ex);
 #else
-    strncpy(worker->s->name, shared->name, sizeof(worker->s->name));
+    PROXY_STRNCPY(worker->s->name, shared->name);
 #endif
     ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, server,
                  "create_worker: worker for %s arranging shared memory hostname %s:%s", url, worker->s->hostname,
                  shared->hostname);
-    strncpy(worker->s->hostname, shared->hostname, sizeof(worker->s->hostname));
+    PROXY_STRNCPY(worker->s->hostname, shared->hostname);
     ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, server,
                  "create_worker: worker for %s arranging shared memory hostname_ex %s:%s", url, worker->s->hostname_ex,
                  shared->hostname_ex);
-    strncpy(worker->s->hostname_ex, shared->hostname_ex, sizeof(worker->s->hostname_ex));
+    PROXY_STRNCPY(worker->s->hostname_ex, shared->hostname_ex);
     ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, server,
                  "create_worker: worker for %s arranging shared memory scheme %s:%s", url, worker->s->scheme,
                  shared->scheme);
-    strncpy(worker->s->scheme, shared->scheme, sizeof(worker->s->scheme));
+    PROXY_STRNCPY(worker->s->scheme, shared->scheme);
     worker->s->port = shared->port;
     worker->s->hmax = shared->hmax;
-    strncpy(worker->s->route, node->mess.jvm_route, sizeof(worker->s->route));
+    PROXY_STRNCPY(worker->s->route, node->mess.jvm_route);
     worker->s->route[sizeof(worker->s->route) - 1] = '\0';
-    strncpy(worker->s->upgrade, node->mess.upgrade, sizeof(worker->s->upgrade));
+    PROXY_STRNCPY(worker->s->upgrade, node->mess.upgrade);
     worker->s->upgrade[sizeof(worker->s->upgrade) - 1] = '\0';
     if (node->mess.response_field_size > 0) {
         worker->s->response_field_size = node->mess.response_field_size;
@@ -432,7 +432,7 @@ static void create_worker_arrange_shared_mem(proxy_server_conf *conf, proxy_work
     } else {
         worker->s->response_field_size_set = 0;
     }
-    strncpy(worker->s->secret, node->mess.ajp_secret, sizeof(worker->s->secret));
+    PROXY_STRNCPY(worker->s->secret, node->mess.ajp_secret);
     worker->s->secret[sizeof(worker->s->secret) - 1] = '\0';
     worker->s->redirect[0] = '\0';
     worker->s->smax = node->mess.smax;
