@@ -133,6 +133,34 @@ jobs:
           done;
           exit $code
 
+  clang-tidy-naming-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          path: mod_proxy_cluster
+      - name: Install clang-tidy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy apache2-dev
+      - name: Check naming conventions
+        run: |
+          code=0
+          cd mod_proxy_cluster/native
+          for file in */*.c */*.h; do
+            status=0
+            output=$(clang-tidy --warnings-as-errors='-*,readability-identifier-naming' "$file" -- -I/usr/include/apache2 -I/usr/include/apr-1.0 -I./include 2>&1) || status=$?
+            if [ $status -eq 0 ]; then
+              printf "%-42s ... OK\n" "$file"
+            else
+              echo "$output"
+              printf "%-42s ... NOK\n" "$file"
+              code=1
+            fi
+          done
+          exit $code
+
   make-httpd-maintainer-mode:
     runs-on: ubuntu-latest
     strategy:
