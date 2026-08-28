@@ -12,7 +12,7 @@ run_test() {
     else
         printf "Running %-42s ..." "$1"
     fi
-    if [ $DEBUG ]; then
+    if is_enabled "$DEBUG"; then
         sh $1 > "logs/${2:-$1}.log" 2>&1
     else
         sh $1 > /dev/null 2>&1
@@ -24,7 +24,7 @@ run_test() {
         ret=1
     fi
     # preserve httpd's logs too if DEBUG
-    if [ $DEBUG ]; then
+    if is_enabled "$DEBUG"; then
         local httpd_cont=$(docker ps -a | grep $HTTPD_IMG | cut -f 1 -d' ')
         docker logs  $httpd_cont > "logs/${2:-$1}-httpd.log" 2>&1
         docker cp ${httpd_cont}:/usr/local/apache2/logs/access_log "logs/${2:-$1}-httpd_access.log" 2> /dev/null || true
@@ -33,6 +33,18 @@ run_test() {
     httpd_remove > /dev/null 2>&1
     tomcat_all_remove > /dev/null 2>&1
     return $ret
+}
+
+# This is weird, but the return value must be seemingly
+# "inversed" in shell because 0 is a "success" whereas
+# non-zero is a failure.
+# Empty value and off/no/0 (case insensitive) are treated as disabled.
+is_enabled() {
+    case "$1" in
+    ""|"0"|[Oo][Ff][Ff]|[Nn][Oo])
+        return 1;;
+    esac
+    return 0
 }
 
 #####################################################
@@ -61,7 +73,7 @@ httpd_create() {
 httpd_start() {
     # if httpd is already running for some reason, end it
     httpd_remove || true
-    if [ $DEBUG ]; then
+    if is_enabled "$DEBUG"; then
         echo "httpd mod_proxy_cluster image config:"
         echo "    CONF:    ${MPC_CONF:-httpd/mod_proxy_cluster.conf}"
         echo "    NAME:    ${MPC_NAME:-httpd-mod_proxy_cluster}"
