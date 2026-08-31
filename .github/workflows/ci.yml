@@ -320,8 +320,16 @@ jobs:
           sudo touch /etc/containers/nodocker
           cd test
           sh setup-dependencies.sh
-      - name: Print network environment
-        run: ss -ltp
+      - name: Configure Podman logging driver
+        run: |
+          mkdir -p ~/.config/containers
+          cat <<EOF > ~/.config/containers/containers.conf
+          [containers]
+          log_driver = "k8s-file"
+
+          [engine]
+          events_logger = "file"
+          EOF
       - name: Run testsuite
         run: |
           cd test
