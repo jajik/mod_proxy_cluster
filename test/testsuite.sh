@@ -31,6 +31,7 @@ echo "        HTTPD_IMG=$HTTPD_IMG"
 if [ ! -z ${MPC_CONF+x} ]; then
     echo "        MPC_CONF=$MPC_CONF"
 fi
+echo "        DEBUG=${DEBUG:-Off (undefined)}"
 
 if [ ! -d logs ]; then
     mkdir logs
@@ -44,7 +45,7 @@ if [ ! -d tomcat/target ]; then
 fi
 
 echo -n "Creating docker containers..."
-if [ ! -z ${DEBUG+x} ]; then
+if is_enabled "$DEBUG"; then
      httpd_create  || exit 2
      tomcat_create || exit 3
 else
