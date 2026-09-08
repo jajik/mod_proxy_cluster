@@ -366,6 +366,8 @@ jobs:
   perl-tests:
     runs-on: ubuntu-latest
     needs: make-with-httpd-trunk
+    env:
+      CODE_COVERAGE: ${{ inputs.code-coverage || 'on' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -373,7 +375,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get remove apache2*
-          sudo apt-get install -y gcc make perl cpanminus libcrypt-ssleay-perl
+          sudo apt-get install -y gcc make cmake perl cpanminus libcrypt-ssleay-perl gcovr lcov
       - name: Get Apache built in the previous job
         uses: actions/download-artifact@v7
         with:
@@ -381,10 +383,21 @@ jobs:
           path: apache2
       - name: Put httpd on the right path
         run: |
-          mkdir test-perl/t/modules/
-          cp apache2/modules/{mod_proxy_cluster.so,mod_manager.so,mod_advertise.so,mod_lbmethod_cluster.so} test-perl/t/modules/
           sudo mv apache2/ /usr/local/apache2/
           sudo chmod -R 755 /usr/local/apache2/
+      - name: Build the modules
+        run: |
+          APR_LIB=$(ls /usr/local/apache2/lib/libapr-*.so | head -n 1)
+          cmake -S native -B native/build \
+                -DAPACHE_INCLUDE_DIR=/usr/local/apache2/include \
+                -DAPR_INCLUDE_DIR=/usr/local/apache2/include \
+                -DAPRUTIL_INCLUDE_DIR=/usr/local/apache2/include \
+                -DAPR_LIBRARY=$APR_LIB \
+                -DAPRUTIL_LIBRARY=$APR_LIB \
+                -DENABLE_COVERAGE=${{ inputs.code-coverage == 'off' && 'OFF' || 'ON' }}
+          cmake --build native/build
+          mkdir test-perl/t/modules/
+          cp native/build/modules/*.so test-perl/t/modules/
       - name: Install perl modules
         run: |
           sudo cpanm --force Apache::Test Apache::TestMM HTTP::Request LWP::UserAgent
@@ -404,6 +417,22 @@ jobs:
           name: Perl tests logs
           path: |
             test-perl/t/logs/*
+          retention-days: 7
+      # t/TEST stops httpd on its own, so the counters are already dumped by now
+      - name: Generate the coverage reports
+        if: ${{ env.CODE_COVERAGE == 'on' }}
+        run: |
+          native/scripts/coverage.sh capture perl-tests test-perl/coverage
+          native/scripts/coverage.sh report test-perl/coverage
+      - name: Print the coverage summary
+        if: ${{ env.CODE_COVERAGE == 'on' }}
+        run: cat test-perl/coverage/test-coverage.txt
+      - name: Preserve coverage files
+        if: ${{ env.CODE_COVERAGE == 'on' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: Perl tests coverage
+          path: test-perl/coverage/*
           retention-days: 7
 
   doxygen:

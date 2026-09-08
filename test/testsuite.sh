@@ -37,14 +37,14 @@ if [ ! -d logs ]; then
     mkdir logs
 fi
 
-if [ $CODE_COVERAGE ]; then
+. includes/common.sh
+
+if is_enabled "$CODE_COVERAGE"; then
     if [ ! -d coverage ]; then
         mkdir coverage
     fi
     rm -f coverage/*
 fi
-
-. includes/common.sh
 
 if [ ! -d tomcat/target ]; then
     echo "Missing dependencies. Please run setup-dependencies.sh and then try again"
@@ -124,7 +124,7 @@ else
     res=1
 fi
 
-if [ $CODE_COVERAGE ]; then
+if is_enabled "$CODE_COVERAGE"; then
     echo "Generating test coverage..."
     MPC_CONF=httpd/mod_lbmethod_cluster.conf httpd_start > /dev/null 2>&1
     docker exec $MPC_NAME mkdir -p /coverage
@@ -133,8 +133,7 @@ if [ $CODE_COVERAGE ]; then
         [ -e "$f" ] && docker cp $f $MPC_NAME:/coverage/ > /dev/null
     done
 
-    docker exec $MPC_NAME sh -c 'cd /native && gcovr --gcov-ignore-parse-errors=negative_hits.warn_once_per_file --add-tracefile "/coverage/coverage-*.json" --txt /coverage/test-coverage.txt --html-details /coverage/test-coverage.html > /coverage/test-coverage.log 2>&1'
-    docker exec $MPC_NAME sh -c 'cd /coverage && mkdir -p lcov && genhtml --ignore-errors negative,empty *.info --output-directory lcov > /coverage/lcov/test-coverage-lcov.log 2>&1'
+    docker exec $MPC_NAME /native/scripts/coverage.sh report /coverage
     docker cp $MPC_NAME:/coverage/ . > /dev/null
 
     httpd_remove > /dev/null 2>&1
