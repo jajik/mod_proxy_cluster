@@ -36,10 +36,10 @@ capture() {
 
     mkdir -p $out
     $GCOVR --json $out/coverage-$name.json > $out/coverage-$name.log 2>&1
-    # "unused" is ignored as well, the exclude pattern matches nothing when httpd
-    # headers do not live in /usr/local (which is the case outside of our container)
-    lcov --capture --directory $NATIVE/build --ignore-errors gcov,negative,unused \
-         --exclude '/usr/local/*' --output-file $out/coverage-$name.info \
+    # lcov is confined to our sources the same way gcovr is by --root, otherwise the
+    # httpd headers end up in the report as well (wherever they happen to live)
+    lcov --capture --directory $NATIVE/build --ignore-errors gcov,negative \
+         --include "$NATIVE/*" --output-file $out/coverage-$name.info \
          > $out/coverage-lcov-$name.log 2>&1
 }
 
@@ -56,6 +56,10 @@ report() {
     $GCOVR --add-tracefile "$out/coverage-*.json" \
            --txt $out/test-coverage.txt --html-details $out/test-coverage.html \
            > $out/test-coverage.log 2>&1
+    # unlike gcovr, lcov records absolute paths, so they are pointed back at these
+    # sources; that is a no-op for the tracefiles captured here and it is what makes
+    # the ones captured elsewhere merge (and render) instead of piling up side by side
+    sed -i "s|^SF:.*/native/|SF:$NATIVE/|" $out/coverage-*.info
     genhtml --ignore-errors negative,empty $out/coverage-*.info \
             --output-directory $out/lcov > $out/lcov/test-coverage-lcov.log 2>&1
 }

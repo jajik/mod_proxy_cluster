@@ -357,7 +357,7 @@ jobs:
       # Preserve coverage data if defined
       - name: Preserve coverage files
         if: ${{ env.CODE_COVERAGE == 'on' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
             name: Coverage ${{ matrix.os }}
             path: test/coverage/*
@@ -433,6 +433,43 @@ jobs:
         with:
           name: Perl tests coverage
           path: test-perl/coverage/*
+          retention-days: 7
+
+  # Merges what both testsuites gathered into a single report.
+  merged-coverage:
+    runs-on: ubuntu-latest
+    needs: [ tests, perl-tests ]
+    if: ${{ inputs.code-coverage != 'off' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcovr lcov
+      # Only the x86 run is taken, the arm one goes through the very same tests
+      - name: Get the coverage gathered by the container testsuite
+        uses: actions/download-artifact@v7
+        with:
+          name: Coverage ubuntu-latest
+          path: coverage
+      - name: Get the coverage gathered by the perl testsuite
+        uses: actions/download-artifact@v7
+        with:
+          name: Perl tests coverage
+          path: coverage
+      # the per-suite reports are dropped, only the tracefiles are of interest here
+      - name: Merge the tracefiles
+        run: |
+          rm -rf coverage/lcov coverage/test-coverage.*
+          native/scripts/coverage.sh report coverage
+      - name: Print the coverage summary
+        run: cat coverage/test-coverage.txt
+      - name: Preserve coverage files
+        uses: actions/upload-artifact@v6
+        with:
+          name: Merged coverage
+          path: coverage/*
           retention-days: 7
 
   doxygen:
