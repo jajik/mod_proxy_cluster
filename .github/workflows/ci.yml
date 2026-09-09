@@ -45,6 +45,11 @@ on:
         type: number
         default: 2
 
+# gcovr reads only the tracefiles written by its own version, so every job gathering or
+# merging them has to use the same one; test/httpd/Containerfile pins it as well
+env:
+  GCOVR_VERSION: "8.6"
+
 jobs:
 
   cmake-fedora-latest:
@@ -375,7 +380,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get remove apache2*
-          sudo apt-get install -y gcc make cmake perl cpanminus libcrypt-ssleay-perl gcovr lcov
+          sudo apt-get install -y gcc make cmake perl cpanminus libcrypt-ssleay-perl lcov python3-pip
+          sudo pip install --break-system-packages gcovr==$GCOVR_VERSION
       - name: Get Apache built in the previous job
         uses: actions/download-artifact@v7
         with:
@@ -446,7 +452,8 @@ jobs:
       - name: Setup dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcovr lcov
+          sudo apt-get install -y lcov python3-pip
+          sudo pip install --break-system-packages gcovr==$GCOVR_VERSION
       # Only the x86 run is taken, the arm one goes through the very same tests
       - name: Get the coverage gathered by the container testsuite
         uses: actions/download-artifact@v7

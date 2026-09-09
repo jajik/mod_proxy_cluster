@@ -41,7 +41,12 @@ FROM fedora:44
 
 ENV CONF=httpd/mod_proxy_cluster.conf
 
-RUN dnf install pcre apr-util wcstools gcc gcovr lcov -y
+RUN dnf install pcre apr-util wcstools gcc lcov python3-pip -y
+
+# gcovr reads only the tracefiles written by its own version, so the one used here has
+# to stay the same as GCOVR_VERSION in .github/workflows/ci.yml, otherwise the coverage
+# gathered here cannot be merged with the one gathered by the perl testsuite
+RUN pip install --break-system-packages gcovr==8.6
 
 COPY --from=builder /usr/local/apache2 /usr/local/apache2
 COPY --from=builder /native /native

@@ -17,13 +17,21 @@
 # exits with 0 if the data were collected
 # exits with 1 if there is nothing to collect
 # exits with 2 when used incorrectly
+# exits with 3 if one of the coverage tools failed
 
 NATIVE=${NATIVE:-$(cd -- "$(dirname -- "$0")/.." && pwd)}
 
 # gcovr is always given --root so that the paths within the tracefiles stay relative
-# to native/. That keeps tracefiles captured from different runs (and, since the
-# tracefiles are plain data, even from different machines and gcc versions) mergeable.
+# to native/. That keeps tracefiles captured from different runs (and even on
+# different machines) mergeable. Mind that gcovr reads its own tracefiles only when
+# they were written by the very same version, so all the jobs have to agree on one.
 GCOVR="gcovr --gcov-ignore-parse-errors=negative_hits.warn_once_per_file --root $NATIVE"
+
+# Prints the given message and gives up
+fail() {
+    echo "$1"
+    exit 3
+}
 
 capture() {
     name=$1
@@ -35,12 +43,14 @@ capture() {
     fi
 
     mkdir -p $out
-    $GCOVR --json $out/coverage-$name.json > $out/coverage-$name.log 2>&1
+    $GCOVR --json $out/coverage-$name.json > $out/coverage-$name.log 2>&1 \
+        || fail "gcovr failed to capture $name, see $out/coverage-$name.log"
     # lcov is confined to our sources the same way gcovr is by --root, otherwise the
     # httpd headers end up in the report as well (wherever they happen to live)
     lcov --capture --directory $NATIVE/build --ignore-errors gcov,negative \
          --include "$NATIVE/*" --output-file $out/coverage-$name.info \
-         > $out/coverage-lcov-$name.log 2>&1
+         > $out/coverage-lcov-$name.log 2>&1 \
+        || fail "lcov failed to capture $name, see $out/coverage-lcov-$name.log"
 }
 
 report() {
@@ -55,13 +65,15 @@ report() {
     # the glob is quoted on purpose, it is gcovr who expands it
     $GCOVR --add-tracefile "$out/coverage-*.json" \
            --txt $out/test-coverage.txt --html-details $out/test-coverage.html \
-           > $out/test-coverage.log 2>&1
+           > $out/test-coverage.log 2>&1 \
+        || fail "gcovr failed to merge the tracefiles, see $out/test-coverage.log"
     # unlike gcovr, lcov records absolute paths, so they are pointed back at these
     # sources; that is a no-op for the tracefiles captured here and it is what makes
     # the ones captured elsewhere merge (and render) instead of piling up side by side
     sed -i "s|^SF:.*/native/|SF:$NATIVE/|" $out/coverage-*.info
     genhtml --ignore-errors negative,empty $out/coverage-*.info \
-            --output-directory $out/lcov > $out/lcov/test-coverage-lcov.log 2>&1
+            --output-directory $out/lcov > $out/lcov/test-coverage-lcov.log 2>&1 \
+        || fail "genhtml failed, see $out/lcov/test-coverage-lcov.log"
 }
 
 usage() {
