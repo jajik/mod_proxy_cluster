@@ -1,15 +1,10 @@
 FROM fedora:44 AS builder
 
 ARG HTTPD_SOURCES="https://dlcdn.apache.org/httpd/httpd-2.4.68.tar.gz"
-ARG ENABLE_COVERAGE=""
 
 RUN dnf install gcc apr-devel apr-util-devel openssl-devel pcre-devel redhat-rpm-config wcstools cmake -y
 
 ENV HTTPD=${HTTPD_SOURCES}
-
-# make sure you have copy of the local repository at place
-# (our function "httpd_create" takes care of that)
-COPY mod_proxy_cluster /
 
 ADD ${HTTPD} .
 
@@ -26,6 +21,17 @@ RUN make
 RUN make install
 # we don't need any other listeners except the ones we define in our config files
 RUN sed -i 's/\(Listen 80\)/#\1/' /usr/local/apache2/conf/httpd.conf
+
+# the sources come in only now so that a change in them does not invalidate the layers
+# above, the httpd build in particular
+#
+# make sure you have copy of the local repository at place
+# (our function "httpd_create" takes care of that)
+COPY mod_proxy_cluster /
+
+# declared only here, right above the step that reads it, so that the layers of the httpd
+# build above are shared no matter what it is set to
+ARG ENABLE_COVERAGE=""
 
 # httpd is installed in /usr/local/apache2/bin/
 # build and install mod_proxy_cluster *.so files.
@@ -44,8 +50,8 @@ ENV CONF=httpd/mod_proxy_cluster.conf
 RUN dnf install pcre apr-util wcstools gcc lcov python3-pip -y
 
 # gcovr reads only the tracefiles written by its own version, so the one used here has
-# to stay the same as GCOVR_VERSION in .github/workflows/ci.yml, otherwise the coverage
-# gathered here cannot be merged with the one gathered by the perl testsuite
+# to stay the same as GCOVR_VERSION in .github/workflows/ci.yml, otherwise the merged
+# report cannot be put together out of what is gathered here
 RUN pip install --break-system-packages gcovr==8.6
 
 COPY --from=builder /usr/local/apache2 /usr/local/apache2

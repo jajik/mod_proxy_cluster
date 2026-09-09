@@ -65,7 +65,16 @@ is_enabled() {
 ### H T T P D   H E L P E R   F U N C T I O N S   ###
 #####################################################
 # create httpd container
+#
+# Set HTTPD_IMG_PREBUILT when $HTTPD_IMG is already at hand and the build is to be
+# skipped; the CI builds the image in a job of its own and shares it between the
+# testsuites so that both gather coverage of the very same binaries.
 httpd_create() {
+    if is_enabled "$HTTPD_IMG_PREBUILT"; then
+        echo "Using the prebuilt $HTTPD_IMG image"
+        return 0
+    fi
+
     rm -rf httpd/mod_proxy_cluster /tmp/mod_proxy_cluster
     mkdir /tmp/mod_proxy_cluster
     # make sure the native are cleaned before copying

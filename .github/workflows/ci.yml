@@ -45,8 +45,9 @@ on:
         type: number
         default: 2
 
-# gcovr reads only the tracefiles written by its own version, so every job gathering or
-# merging them has to use the same one; test/httpd/Containerfile pins it as well
+# gcovr reads only the tracefiles written by its own version. Both testsuites gather
+# theirs with the gcovr of the httpd image, so the merged-coverage job below, which is
+# the only one running outside of it, has to match what test/httpd/Containerfile pins.
 env:
   GCOVR_VERSION: "8.6"
 
@@ -252,12 +253,62 @@ jobs:
             sudo cp *.so /usr/local/apache2/modules; \
             cd ..; \
           done;
-      - name: Preserve built Apache for perl-test job
+
+  # Both testsuites run against this one image, so that they exercise the very same
+  # binaries and the coverage they gather can be merged (see the merged-coverage job).
+  build-httpd-image:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        fail-fast: false
+        matrix:
+              os: [ ubuntu-latest, ubuntu-24.04-arm ]
+    env:
+      HTTPD_IMG: local-httpd
+      CODE_COVERAGE: ${{ inputs.code-coverage || 'on' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y podman-docker zstd
+          sudo touch /etc/containers/nodocker
+      # Compiling httpd takes the better part of the job and depends on the Containerfile
+      # alone, so podman's layer cache is carried over between runs. The layers cannot be
+      # handed to actions/cache directly, they sit in overlay directories that are readable
+      # only inside podman's user namespace; a tarball made in there is what gets cached.
+      - name: Restore the podman layer cache
+        id: podman-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/podman-store.tar.zst
+          key: podman-store-${{ matrix.os }}-${{ hashFiles('test/httpd/Containerfile') }}
+      - name: Unpack the podman layer cache
+        if: steps.podman-cache.outputs.cache-hit == 'true'
+        run: |
+          mkdir -p ~/.local/share/containers
+          podman unshare sh -c \
+            'zstd -dc /tmp/podman-store.tar.zst | tar -C ~/.local/share/containers -xf -'
+      - name: Build the httpd image
+        run: |
+          cd test
+          . includes/common.sh
+          httpd_create
+          docker save $HTTPD_IMG | zstd -T0 -o /tmp/httpd-image.tar.zst
+      # the store has to be packed here, actions/cache only picks the tarball up afterwards
+      - name: Pack the podman layer cache
+        if: steps.podman-cache.outputs.cache-hit != 'true'
+        run: |
+          podman unshare tar -C ~/.local/share/containers -cf - storage \
+            | zstd -T0 -o /tmp/podman-store.tar.zst
+      - name: Preserve the httpd image
         uses: actions/upload-artifact@v6
         with:
-          name: apache-trunk
-          path: /usr/local/apache2
-          retention-days: 0 
+          name: httpd-image-${{ matrix.os }}
+          path: /tmp/httpd-image.tar.zst
+          # the tarball is compressed already, zipping it again buys nothing
+          compression-level: 0
+          retention-days: 1
 
   cmake-windows-latest:
     runs-on: ${{ matrix.os }}
@@ -307,6 +358,7 @@ jobs:
 
   tests:
     runs-on: ${{ matrix.os }}
+    needs: build-httpd-image
     strategy:
         fail-fast: false
         matrix:
@@ -314,6 +366,7 @@ jobs:
     env:
       IMG: local-tomcat
       HTTPD_IMG: local-httpd
+      HTTPD_IMG_PREBUILT: "on"
       DEBUG: ${{ inputs.debug || 'on' }}
       FOREVER_PAUSE: ${{ inputs.forever-pause || 100 }}
       ITERATION_COUNT: ${{ inputs.iteration-count || 2 }}
@@ -330,7 +383,7 @@ jobs:
       - name: Setup dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y podman-docker maven git curl iproute2 wcstools
+          sudo apt-get install -y podman-docker maven git curl iproute2 wcstools zstd
           sudo touch /etc/containers/nodocker
           cd test
           sh setup-dependencies.sh
@@ -344,6 +397,13 @@ jobs:
           [engine]
           events_logger = "file"
           EOF
+      - name: Get the httpd image built in the previous job
+        uses: actions/download-artifact@v7
+        with:
+          name: httpd-image-${{ matrix.os }}
+          path: /tmp
+      - name: Load the httpd image
+        run: zstd -dc /tmp/httpd-image.tar.zst | docker load
       - name: Run testsuite
         run: |
           cd test
@@ -368,10 +428,14 @@ jobs:
             path: test/coverage/*
             retention-days: 7
 
+  # The Apache::Test testsuite is run on top of the image the container testsuite uses,
+  # see test-perl/Containerfile for why.
   perl-tests:
     runs-on: ubuntu-latest
-    needs: make-with-httpd-trunk
+    needs: build-httpd-image
     env:
+      HTTPD_IMG: local-httpd
+      PERL_IMG: local-perl-tests
       CODE_COVERAGE: ${{ inputs.code-coverage || 'on' }}
     steps:
       - name: Checkout
@@ -379,43 +443,28 @@ jobs:
       - name: Setup dependencies
         run: |
           sudo apt-get update
-          sudo apt-get remove apache2*
-          sudo apt-get install -y gcc make cmake perl cpanminus libcrypt-ssleay-perl lcov python3-pip
-          sudo pip install --break-system-packages gcovr==$GCOVR_VERSION
-      - name: Get Apache built in the previous job
+          sudo apt-get install -y podman-docker zstd
+          sudo touch /etc/containers/nodocker
+      - name: Get the httpd image built in the previous job
         uses: actions/download-artifact@v7
         with:
-          name: apache-trunk
-          path: apache2
-      - name: Put httpd on the right path
-        run: |
-          sudo mv apache2/ /usr/local/apache2/
-          sudo chmod -R 755 /usr/local/apache2/
-      - name: Build the modules
-        run: |
-          APR_LIB=$(ls /usr/local/apache2/lib/libapr-*.so | head -n 1)
-          cmake -S native -B native/build \
-                -DAPACHE_INCLUDE_DIR=/usr/local/apache2/include \
-                -DAPR_INCLUDE_DIR=/usr/local/apache2/include \
-                -DAPRUTIL_INCLUDE_DIR=/usr/local/apache2/include \
-                -DAPR_LIBRARY=$APR_LIB \
-                -DAPRUTIL_LIBRARY=$APR_LIB \
-                -DENABLE_COVERAGE=${{ inputs.code-coverage == 'off' && 'OFF' || 'ON' }}
-          cmake --build native/build
-          mkdir test-perl/t/modules/
-          cp native/build/modules/*.so test-perl/t/modules/
-      - name: Install perl modules
-        run: |
-          sudo cpanm --force Apache::Test Apache::TestMM HTTP::Request LWP::UserAgent
+          name: httpd-image-ubuntu-latest
+          path: /tmp
+      - name: Load the httpd image
+        run: zstd -dc /tmp/httpd-image.tar.zst | docker load
+      - name: Build the perl testsuite image
+        run: docker build -t $PERL_IMG --build-arg HTTPD_IMG=$HTTPD_IMG -f test-perl/Containerfile test-perl/
       - name: Run testsuite
         run: |
-          cd test-perl
-          perl Makefile.PL -httpd /usr/local/apache2/bin/httpd
-          make
-          t/TEST -httpd /usr/local/apache2/bin/httpd 2>&1 | tee test-perl.log
-          mv test-perl.log t/logs/test-perl.log
-          grep "Result: PASS" -q t/logs/test-perl.log
-          exit $?
+          if [ "$CODE_COVERAGE" = "on" ]; then coverage_env="-e ENABLE_COVERAGE=1"; fi
+          docker run --name perl-tests $coverage_env $PERL_IMG
+      # the container is kept around by the step above precisely for this
+      - name: Get the logs and the coverage out of the container
+        if: always()
+        run: |
+          mkdir -p test-perl/t/logs test-perl/coverage
+          docker cp perl-tests:/test-perl/t/logs/. test-perl/t/logs/ || true
+          docker cp perl-tests:/coverage/. test-perl/coverage/ || true
       - name: Preserve test logs
         uses: actions/upload-artifact@v6
         if: always()
@@ -424,12 +473,6 @@ jobs:
           path: |
             test-perl/t/logs/*
           retention-days: 7
-      # t/TEST stops httpd on its own, so the counters are already dumped by now
-      - name: Generate the coverage reports
-        if: ${{ env.CODE_COVERAGE == 'on' }}
-        run: |
-          native/scripts/coverage.sh capture perl-tests test-perl/coverage
-          native/scripts/coverage.sh report test-perl/coverage
       - name: Print the coverage summary
         if: ${{ env.CODE_COVERAGE == 'on' }}
         run: cat test-perl/coverage/test-coverage.txt
@@ -441,7 +484,9 @@ jobs:
           path: test-perl/coverage/*
           retention-days: 7
 
-  # Merges what both testsuites gathered into a single report.
+  # Merges what both testsuites gathered into a single report. That works because both
+  # of them run the modules of one and the same image; coverage of differently built
+  # ones does not merge, it piles up side by side instead.
   merged-coverage:
     runs-on: ubuntu-latest
     needs: [ tests, perl-tests ]
@@ -454,7 +499,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lcov python3-pip
           sudo pip install --break-system-packages gcovr==$GCOVR_VERSION
-      # Only the x86 run is taken, the arm one goes through the very same tests
+      # Only the x86 run is taken. It goes through the very same tests as the arm one,
+      # which is built by a different gcc and would therefore not merge but pile up.
       - name: Get the coverage gathered by the container testsuite
         uses: actions/download-artifact@v7
         with:

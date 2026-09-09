@@ -1,3 +1,8 @@
+# mod_proxy_cluster requires the watchdog, which some httpd builds have built in
+<IfModule !watchdog_module>
+  LoadModule watchdog_module    modules/mod_watchdog.so
+</IfModule>
+
 LoadModule proxy_module         modules/mod_proxy.so
 LoadModule proxy_http_module    modules/mod_proxy_http.so
 LoadModule proxy_hcheck_module  modules/mod_proxy_hcheck.so
