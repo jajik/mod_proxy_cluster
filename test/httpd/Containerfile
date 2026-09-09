@@ -47,12 +47,10 @@ FROM fedora:44
 
 ENV CONF=httpd/mod_proxy_cluster.conf
 
-RUN dnf install pcre apr-util wcstools gcc lcov python3-pip -y
-
-# gcovr reads only the tracefiles written by its own version, so the one used here has
-# to stay the same as GCOVR_VERSION in .github/workflows/ci.yml, otherwise the merged
-# report cannot be put together out of what is gathered here
-RUN pip install --break-system-packages gcovr==8.6
+# gcovr reads only the tracefiles written by its own version, so every job has to use one
+# and the same. This image is what gathers the coverage and what merges it as well, which
+# is why the distribution one can be taken as it comes.
+RUN dnf install pcre apr-util wcstools gcc lcov gcovr -y
 
 COPY --from=builder /usr/local/apache2 /usr/local/apache2
 COPY --from=builder /native /native

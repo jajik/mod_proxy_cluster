@@ -45,12 +45,6 @@ on:
         type: number
         default: 2
 
-# gcovr reads only the tracefiles written by its own version. Both testsuites gather
-# theirs with the gcovr of the httpd image, so the merged-coverage job below, which is
-# the only one running outside of it, has to match what test/httpd/Containerfile pins.
-env:
-  GCOVR_VERSION: "8.6"
-
 jobs:
 
   cmake-fedora-latest:
@@ -491,14 +485,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ tests, perl-tests ]
     if: ${{ inputs.code-coverage != 'off' }}
+    env:
+      HTTPD_IMG: local-httpd
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
       - name: Setup dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y lcov python3-pip
-          sudo pip install --break-system-packages gcovr==$GCOVR_VERSION
+          sudo apt-get install -y podman-docker zstd
+          sudo touch /etc/containers/nodocker
+      # the merge is done by the gcovr of the image the testsuites ran in, which is the only
+      # way of being certain it is the very same one that wrote the tracefiles; the sources
+      # the report is rendered from come from there as well
+      - name: Get the httpd image
+        uses: actions/download-artifact@v7
+        with:
+          name: httpd-image-ubuntu-latest
+          path: /tmp
+      - name: Load the httpd image
+        run: zstd -dc /tmp/httpd-image.tar.zst | docker load
       # Only the x86 run is taken. It goes through the very same tests as the arm one,
       # which is built by a different gcc and would therefore not merge but pile up.
       - name: Get the coverage gathered by the container testsuite
@@ -515,7 +519,8 @@ jobs:
       - name: Merge the tracefiles
         run: |
           rm -rf coverage/lcov coverage/test-coverage.*
-          native/scripts/coverage.sh report coverage
+          docker run --rm -v $PWD/coverage:/coverage $HTTPD_IMG \
+                 /native/scripts/coverage.sh report /coverage
       - name: Print the coverage summary
         run: cat coverage/test-coverage.txt
       - name: Preserve coverage files
