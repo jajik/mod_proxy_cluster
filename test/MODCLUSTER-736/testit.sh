@@ -11,63 +11,65 @@ SHUTDOWN_PORT=7005
 
 MPC_NAME=MODCLUSTER-736 httpd_start
 
-# Start a bunch ($1, or 6 if no argument is given) of tomcat
-# containers, then test them and stop them
+# Start a batch of tomcat containers (indices $1 to 10, $1 defaults to 5),
+# test them and stop them. Tomcats 2, 3 and 4 are expected to be running already.
 runtomcatbatch() {
     if [ $1 ]; then
       t=$1
     else
-      t=5 # default value when no argument is given
+      t=5 # the first index of the batch
     fi
+    last=10 # the last index of the batch
 
-    for i in $(seq $t 10);
+    for i in $(seq $t $last);
     do
       MPC_NAME=MODCLUSTER-736 tomcat_start $i
     done
 
-    tomcat_count=$(expr 3 + 11 - $t)
+    # the 3 tomcats running already plus the indices from $t to $last
+    tomcat_count=$(expr 3 + $last + 1 - $t)
     tomcat_wait_for_n_nodes $tomcat_count || exit 1
-    for i in $(seq $t 10);
+    for i in $(seq $t $last);
     do
       tomcat_start_webapp $i || exit 1
     done
 
     # test the tomcats
     sleep 20
-    tomcat_all_test_app $tomcat_count
+    ( tomcat_all_test_app $last )
     if [ $? -ne 0 ]; then
-      echo "runtomcatbatch tomcat_all_test_app $tomcat_count FAILED!"
+      echo "runtomcatbatch tomcat_all_test_app $last FAILED!"
       exit 1
     fi
 
-    # "load test" 9 of them
-    tomcat_all_run_ab $tomcat_count
+    # "load test" all of them
+    ( tomcat_all_run_ab $last )
     if [ $? -ne 0 ]; then
-      echo "runtomcatbatch tomcat_all_run_ab $tomcat_count FAILED!"
+      echo "runtomcatbatch tomcat_all_run_ab $last FAILED!"
       exit 1
     fi
 
     # retest
-    tomcat_all_test_app $tomcat_count
+    ( tomcat_all_test_app $last )
     if [ $? -ne 0 ]; then
-      echo "runtomcatbatch tomcat_all_test_app $tomcat_count FAILED!"
+      echo "runtomcatbatch tomcat_all_test_app $last FAILED!"
       exit 1
     fi
 
     # stop the tomcats
-    for i in $(seq $t 10);
+    for i in $(seq $t $last);
     do
       tomcat_shutdown $i
     done
 
-    tomcat_wait_for_n_nodes 3
+    ( tomcat_wait_for_n_nodes 3 )
     if [ $? -ne 0 ]; then
       echo "runtomcatbatch tomcat_wait_for_n_nodes 3 FAILED!"
       exit 1
     fi
 
     # remove the tomcats
-    for i in $(seq $t 10);
+    for i in $(seq $t $last);
     do
       tomcat_remove $i
     done
@@ -78,7 +80,6 @@ runtomcatbatch() {
 # we start the tomcat, put the webapp, test it and later stop and clean up
 singlecycle() {
     echo "singlecycle: Testing tomcat$1"
-    R=$1
     MPC_NAME=MODCLUSTER-736 tomcat_start $1 || exit 1
 
     # Wait for it to start
@@ -122,6 +123,7 @@ singlecycle() {
     tomcat_run_ab $1 || exit 1
     echo "Testing(3) tomcat$1"
     tomcat_shutdown $1 || exit 1
+    i=0
     while true
     do
         curl -s -m 20 http://localhost:8090/mod_cluster_manager | grep Node | grep tomcat$1 > /dev/null
@@ -216,88 +218,91 @@ runmodcluster736() {
             break
         fi
         # cycle the tomcats
-        runtomcatbatch
-
+        ( runtomcatbatch )
         if [ $? -ne 0 ]; then
             echo "runtomcatbatch: runmodcluster736 Failed!"
             exit 1
         fi
-        tomcat_shutdown 2
+        # Kill the JVM rather than shutting it down cleanly. A killed tomcat
+        # sends no MCMP goodbye, so httpd has to notice through failing CPINGs,
+        # which is the path that can leave a worker behind pointing at the slot.
+        # The container is left in place on purpose (see tomcat/start.sh), that
+        # way its name and address stay taken while tomcat5 claims the slot.
+        tomcat_kill 2
 
-        tomcat_wait_for_n_nodes 2
+        ( tomcat_wait_for_n_nodes 2 )
         if [ $? -ne 0 ]; then
             echo "tomcat_wait_for_n_nodes 2: runmodcluster736 Failed!"
             exit 1
         fi
-        tomcat_remove 2
+        # tomcat5 takes over the shared memory slot tomcat2 has just freed
         MPC_NAME=MODCLUSTER-736 tomcat_start 5
 
-        tomcat_wait_for_n_nodes 3
+        ( tomcat_wait_for_n_nodes 3 )
         if [ $? -ne 0 ]; then
             echo "tomcat_wait_for_n_nodes 3: runmodcluster736 Failed!"
             exit 1
         fi
-        tomcat_start_webapp 5
+        ( tomcat_start_webapp 5 )
         if [ $? -ne 0 ]; then
             echo "tomcat_start_webapp 5: runmodcluster736 Failed!"
             exit 1
         fi
         sleep 20
-        tomcat_test_app 5
+        ( tomcat_test_app 5 )
         if [ $? -ne 0 ]; then
             echo "tomcat_test_app 5: runmodcluster736 Failed!"
             exit 1
         fi
         # we have 5 3 4 in shared memory
-        # read 2
+        # read 2, the killed container is still around so drop it to free the name
+        tomcat_remove 2
         MPC_NAME=MODCLUSTER-736 tomcat_start 2
-        tomcat_wait_for_n_nodes 4
+        ( tomcat_wait_for_n_nodes 4 )
         if [ $? -ne 0 ]; then
             echo "tomcat_wait_for_n_nodes 4: runmodcluster736 Failed!"
             exit 1
         fi
-        tomcat_start_webapp 2
+        ( tomcat_start_webapp 2 )
         if [ $? -ne 0 ]; then
             echo "tomcat_start_webapp 2: runmodcluster736 Failed!"
             exit 1
         fi
         sleep 20
-        tomcat_test_app 2
+        ( tomcat_test_app 2 )
         if [ $? -ne 0 ]; then
             echo "tomcat_test_app 2: runmodcluster736 Failed!"
             exit 1
         fi
 
-        sleep 20
-
         # we have 5 3 4 2 in shared memory
         # if something was wrong 2 points to 5
-        tomcat_shutdown 5
+        tomcat_kill 5
 
-        tomcat_wait_for_n_nodes 3
+        ( tomcat_wait_for_n_nodes 3 )
         if [ $? -ne 0 ]; then
             echo "tomcat_wait_for_n_nodes 3: runmodcluster736 Failed!"
             exit 1
         fi
+
+        # Check straight away, no sleeping in between. The workers are created
+        # with a 60 seconds address ttl, so one left pointing at the wrong node
+        # repairs itself if we give it time to sit idle first.
+        ( tomcat_all_test_app 4 )
+        if [ $? -ne 0 ]; then
+            echo "tomcat_all_test_app 4: runmodcluster736 Failed!"
+            exit 1
+        fi
+        # a single curl only ever reaches one httpd child and the damage is per
+        # child, ab keeps the requests coming and spreads them around
+        ( tomcat_all_run_ab 4 )
+        if [ $? -ne 0 ]; then
+            echo "tomcat_all_run_ab 4: runmodcluster736 Failed!"
+            exit 1
+        fi
+        # tomcat5 is removed only now so that its address stays taken until the
+        # checks above are done
         tomcat_remove 5
-
-        tomcat_test_app 2
-        if [ $? -ne 0 ]; then
-            echo "tomcat_test_app 2: runmodcluster736 Failed!"
-            exit 1
-        fi
-
-        tomcat_test_app 3
-        if [ $? -ne 0 ]; then
-            echo "tomcat_test_app 3: runmodcluster736 Failed!"
-            exit 1
-        fi
-
-        tomcat_test_app 4
-        if [ $? -ne 0 ]; then
-            echo "tomcat_test_app 4: runmodcluster736 Failed!"
-            exit 1
-        fi
         echo "runmodcluster736 loop: $runmodcluster736 DONE"
     done
 
@@ -313,19 +318,19 @@ runmodcluster736() {
 
 # MODCLUSTER-736
 echo "Testing MODCLUSTER-736"
-cyclestomcats ${TOMCAT_CYCLE_COUNT:-10}
+( cyclestomcats ${TOMCAT_CYCLE_COUNT:-10} )
 if [ $? -ne 0 ]; then
-  echo "MODCLUSTER-736 cyclestomcats 100 FAILED!"
+  echo "MODCLUSTER-736 cyclestomcats ${TOMCAT_CYCLE_COUNT:-10} FAILED!"
   exit 1
 fi
 echo "cycletomcats DONE"
-forevertomcat
+( forevertomcat )
 if [ $? -ne 0 ]; then
   echo "MODCLUSTER-736 forevertomcat FAILED!"
   exit 1
 fi
 echo "forevertomcat DONE"
-runmodcluster736
+( runmodcluster736 )
 if [ $? -ne 0 ]; then
   echo "MODCLUSTER-736 runmodcluster736 FAILED!"
   exit 1
