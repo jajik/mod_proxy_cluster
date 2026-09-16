@@ -176,24 +176,28 @@ tomcat_start() {
 #
 # Wait until there are $1 nodes in OK state (i.e., some will start or go away if the count is different)
 tomcat_wait_for_n_nodes() {
-    nodes=${1:-0}
+    local nodes=${1:-0}
+    local nbnodes
+    local i=0
     curl -s http://localhost:8090/mod_cluster_manager -m 20 -o /dev/null
     if [ $? -ne 0 ]; then
         echo "$(date) httpd isn't running or something is VERY wrong"
         exit 1
     fi
-    NBNODES=-1
-    i=0
-    while [ ${NBNODES} != ${nodes} ]
+
+    while true
     do
-        NBNODES=$(curl -s http://localhost:8090/mod_cluster_manager -m 20 | grep "Status: OK" | awk ' { print $3} ' | wc -l)
-        sleep 10
-        echo "$(date) Waiting for $nodes node to be ready (nodes ready: $NBNODES)"
+        nbnodes=$(curl -s http://localhost:8090/mod_cluster_manager -m 20 | grep -c "Status: OK")
+        if [ "$nbnodes" = "$nodes" ]; then
+            break
+        fi
         i=$(expr $i + 1)
         if [ $i -gt 60 ]; then
-            echo "($date) Timeout! There are not $nodes nodes but $NBNODES instead"
+            echo "$(date) Timeout! There are not $nodes nodes but $nbnodes instead"
             exit 1
         fi
+        echo "$(date) Waiting for $nodes node to be ready (nodes ready: $nbnodes)"
+        sleep 10
     done
     curl -s http://localhost:8090/mod_cluster_manager -m 20 -o /dev/null
     if [ $? -ne 0 ]; then
@@ -338,9 +342,18 @@ tomcat_jdbsuspend_exit() {
 #
 # Run a load test for the given tomcat$1 using ab
 tomcat_run_ab() {
-    ab -c10 -n10 http://localhost:8090/tomcat$1/test.jsp > /dev/null
+    local output
+    output=$(ab -c10 -n10 http://localhost:8090/tomcat$1/test.jsp 2>&1)
     if [ $? -ne 0 ]; then
         echo "$(date) abtomcat: Loading tomcat$1 failed"
+        echo "$output"
+        exit 1
+    fi
+    # ab exits with 0 even when the server responds with errors, we have to
+    # look for them in its report
+    if echo "$output" | grep -qE '^(Failed requests|Non-2xx responses):[[:space:]]*[1-9]'; then
+        echo "$(date) abtomcat: Loading tomcat$1 returned failed requests"
+        echo "$output"
         exit 1
     fi
 }
