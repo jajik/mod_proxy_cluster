@@ -214,6 +214,30 @@ tomcat_wait_for_n_nodes() {
 }
 
 #
+# Wait until the webapp context of tomcat$1 is registered with httpd.
+# Deploying the webapp and announcing it over MCMP takes a while and the delay
+# grows when the STATUS commands start timing out, so a fixed sleep is not
+# enough (the deployment scan and the MCMP handling share a thread pool).
+tomcat_wait_for_context() {
+    local i=0
+    while true
+    do
+        # we have to grep the beginning slash but also a comma at the end, otherwise hostname might be matched
+        curl -s -m 20 http://localhost:8090/mod_cluster_manager | grep "/tomcat$1," > /dev/null
+        if [ $? -eq 0 ]; then
+            break
+        fi
+        if [ $i -gt 300 ]; then
+            echo "$(date) Timeout! The context of tomcat$1 is not registered after 300 seconds"
+            exit 1
+        fi
+        i=$(expr $i + 1)
+        sleep 1
+    done
+    echo "$(date) Context /tomcat$1 is registered"
+}
+
+#
 # Stop and remove tomcat docker container of a given name
 tomcat_remove_by_name() {
     docker ps -a | grep $1

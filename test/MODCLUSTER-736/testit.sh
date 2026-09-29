@@ -33,9 +33,12 @@ runtomcatbatch() {
     do
       tomcat_start_webapp $i || exit 1
     done
+    for i in $(seq $t $last);
+    do
+      tomcat_wait_for_context $i || exit 1
+    done
 
     # test the tomcats
-    sleep 20
     ( tomcat_all_test_app $last )
     if [ $? -ne 0 ]; then
       echo "runtomcatbatch tomcat_all_test_app $last FAILED!"
@@ -101,21 +104,7 @@ singlecycle() {
     echo "Testing(0) tomcat$1 started"
     tomcat_start_webapp $1 || exit 1
     echo "Testing(0) tomcat$1 with webapp"
-    i=0
-    while true
-    do
-        # we have to grep the beginning slash but also a comma at the end, otherwise hostname might be matched
-        curl -s -m 20 http://localhost:8090/mod_cluster_manager | grep "/tomcat$1," > /dev/null
-        if [ $? -eq 0 ]; then
-            break
-        fi
-        if [ $i -gt 300 ]; then
-            echo "Timeout: webapp on tomcat$1 is not ready after 300 seconds"
-            exit 1
-        fi
-        i=$(expr $i + 1)
-        sleep 1
-    done
+    tomcat_wait_for_context $1 || exit 1
     echo "Testing(1) tomcat$1"
     tomcat_test_app $1 || exit 1
     echo "Testing(2) tomcat$1"
@@ -203,7 +192,9 @@ runmodcluster736() {
     tomcat_start_webapp 2 || exit 1
     tomcat_start_webapp 3 || exit 1
     tomcat_start_webapp 4 || exit 1
-    sleep 20
+    tomcat_wait_for_context 2 || exit 1
+    tomcat_wait_for_context 3 || exit 1
+    tomcat_wait_for_context 4 || exit 1
     tomcat_test_app 2 || exit 1
     tomcat_test_app 3 || exit 1
     tomcat_test_app 4 || exit 1
@@ -248,7 +239,11 @@ runmodcluster736() {
             echo "tomcat_start_webapp 5: runmodcluster736 Failed!"
             exit 1
         fi
-        sleep 20
+        ( tomcat_wait_for_context 5 )
+        if [ $? -ne 0 ]; then
+            echo "tomcat_wait_for_context 5: runmodcluster736 Failed!"
+            exit 1
+        fi
         ( tomcat_test_app 5 )
         if [ $? -ne 0 ]; then
             echo "tomcat_test_app 5: runmodcluster736 Failed!"
@@ -268,7 +263,11 @@ runmodcluster736() {
             echo "tomcat_start_webapp 2: runmodcluster736 Failed!"
             exit 1
         fi
-        sleep 20
+        ( tomcat_wait_for_context 2 )
+        if [ $? -ne 0 ]; then
+            echo "tomcat_wait_for_context 2: runmodcluster736 Failed!"
+            exit 1
+        fi
         ( tomcat_test_app 2 )
         if [ $? -ne 0 ]; then
             echo "tomcat_test_app 2: runmodcluster736 Failed!"
