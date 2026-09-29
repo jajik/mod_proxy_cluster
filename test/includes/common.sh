@@ -179,6 +179,7 @@ tomcat_wait_for_n_nodes() {
     local nodes=${1:-0}
     local nbnodes
     local i=0
+    local success=0
     curl -s http://localhost:8090/mod_cluster_manager -m 20 -o /dev/null
     if [ $? -ne 0 ]; then
         echo "$(date) httpd isn't running or something is VERY wrong"
@@ -189,15 +190,20 @@ tomcat_wait_for_n_nodes() {
     do
         nbnodes=$(curl -s http://localhost:8090/mod_cluster_manager -m 20 | grep -c "Status: OK")
         if [ "$nbnodes" = "$nodes" ]; then
-            break
+            success=$(expr $success + 1)
+            if [ "$success" = 3 ]; then
+                break
+            fi
+        else
+            success=0
         fi
         i=$(expr $i + 1)
-        if [ $i -gt 60 ]; then
+        if [ $i -gt 120 ]; then
             echo "$(date) Timeout! There are not $nodes nodes but $nbnodes instead"
             exit 1
         fi
         echo "$(date) Waiting for $nodes node to be ready (nodes ready: $nbnodes)"
-        sleep 10
+        sleep 5
     done
     curl -s http://localhost:8090/mod_cluster_manager -m 20 -o /dev/null
     if [ $? -ne 0 ]; then
